@@ -1,4 +1,4 @@
-# estimate_spatial_information
+# unbiased_information_estimation
 In this repository, we use two methods to correct the upward bias in the naive calculation of information content, seeking a bias-free estimation of the information carried by neuronal activity about a given encoded variable.
 
 
