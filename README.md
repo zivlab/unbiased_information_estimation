@@ -36,5 +36,6 @@ Before running the script, change the *data_pathway* to the *sample data* direct
 
 ## Additional comments
 The bias correction methods can be modified to accomodate additional information theoretic measures.
+
 The obtained results of the SSR and BAE methods are compared against shuffle reduction (SR) and asymptotic extrapolation (AE). 
 
