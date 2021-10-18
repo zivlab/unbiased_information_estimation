@@ -1,0 +1,15 @@
+General description:
+--------------------
+The calcium imaging data set consists of n=9 mice. N=4 mice were imaged in hippocampal CA1 and N=5 mice imaged in hippocampal CA3.
+For each mouse the data includes the last for imaging sessions in each of two different linear tracks (straight and L-shape), when the environments are already familiar.
+The data includes the estimated spike trains (based on the CNMF-e algorithm) and the binned mouse position for the running periods of each 20-minute-long session.
+The time bin of the spike train and stimulus trace is the same as the imaging frame rate (20Hz in all mice except for C8M2 which was imaged at 10Hz).
+
+
+Data organization:
+------------------
+<mouseID>_spike_train:
+A cell of size 2x4x2, corresponding to 2 environments, 4 sessions per environments, 2 running directions per environment 
+<mouseID>_stimulus_trace:
+A cell of size 2x4x2, corresponding to 2 environments, 4 sessions per environments, 2 running directions per environment 
+ 
