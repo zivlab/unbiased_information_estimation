@@ -42,7 +42,7 @@ measures_to_estimate=[estimate_SI_bit_spike,estimate_SI_bit_sec,estimate_MI];
 
 %% Step 1 - load the spike train and stimulus trace:
 
-data_path='D:\dev\Bias correction\estimate_spatial_information\Real data\Sample data\';
+data_path='D:\dev\Bias correction\unbiased_information_estimation\Real data\Sample data\';
 temp_spike_train=load(fullfile(data_path,'spike_train.mat'));
 spike_train=temp_spike_train.spike_train;
 temp_stimulus_trace=load(fullfile(data_path,'stimulus_trace.mat'));
@@ -223,8 +223,8 @@ if measures_to_estimate(1) % for SI in bit/spike
     xlim([0 1.1*max(SI_BAE_bit_spike)])
     ylim([0 1.1*max(SI_BAE_bit_spike)])
     axis square
-    xlabel('SSR (bit/spike)')
-    ylabel('BAE (bit/spike)')
+    xlabel('SSR estimation (bit/spike)')
+    ylabel('BAE estimation (bit/spike)')
     title('SI (bit/spike)')
     if ~isempty(unstable_estimation_or_inaccurate_fit)
         legend('Stable and accurate','Unstable or inaccurate','Location','northwest')
@@ -270,8 +270,8 @@ if measures_to_estimate(2) % for SI in bit/sec
     xlim([0 1.1*max(SI_BAE_bit_sec)])
     ylim([0 1.1*max(SI_BAE_bit_sec)])
     axis square
-    xlabel('SSR (bit/sec)')
-    ylabel('BAE (bit/sec)')
+    xlabel('SSR estimation (bit/sec)')
+    ylabel('BAE estimation (bit/sec)')
     title('SI (bit/sec)')
     if ~isempty(unstable_estimation_or_inaccurate_fit)
         legend('Stable and accurate','Unstable or inaccurate','Location','northwest')
@@ -317,8 +317,8 @@ if measures_to_estimate(3) % for MI
     xlim([0 1.1*max(MI_BAE_)])
     ylim([0 1.1*max(MI_BAE_)])
     axis square
-    xlabel('SSR (bit)')
-    ylabel('BAE (bit)')
+    xlabel('SSR estimation (bit)')
+    ylabel('BAE estimation (bit)')
     title('MI')
     if ~isempty(unstable_estimation_or_inaccurate_fit)
         legend('Stable and accurate','Unstable or inaccurate','Location','northwest')

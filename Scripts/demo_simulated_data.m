@@ -42,7 +42,7 @@ measures_to_estimate=[estimate_SI_bit_spike,estimate_SI_bit_sec,estimate_MI];
 
 %% Step 1 - load the spike train and stimulus trace:
 
-data_path='D:\dev\Bias correction\estimate_spatial_information\Simulated data\Sample data\';
+data_path='D:\dev\Bias correction\unbiased_information_estimation\Simulated data\Sample data\';
 temp_spike_train=load(fullfile(data_path,'simulated_spike_train.mat'));
 simulated_spike_train=temp_spike_train.simulated_spike_train;
 temp_stimulus_trace=load(fullfile(data_path,'stimulus_trace.mat'));

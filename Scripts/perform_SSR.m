@@ -85,12 +85,10 @@ ylim([0 1.1*max(information_versus_sample_size(:,end))])
 axis square
 if strcmp(units,'bit/spike') || strcmp(units,'bit/sec')
     xlabel(['Naive SI (' units ')'])
-    ylabel(['SSR SI (' units ')'])
 else
     xlabel(['Naive MI (' units ')'])
-    ylabel(['SSR MI (' units ')'])
 end
-ylabel(['SSR (' units ')'])
+ylabel(['SSR estimation (' units ')'])
 set(gca,'fontsize',16)
 box off
 if sum(SSR_stability<stability_threshold)>0

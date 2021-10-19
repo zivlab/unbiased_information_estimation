@@ -136,12 +136,10 @@ ylim([0 1.1*max(information_versus_sample_size(:,end))])
 axis square
 if strcmp(units,'bit/spike') || strcmp(units,'bit/sec')
     xlabel(['Naive SI (' units ')'])
-    ylabel(['BAE SI (' units ')'])
 else
     xlabel(['Naive MI (' units ')'])
-    ylabel(['BAE MI(' units ')'])
 end
-ylabel(['BAE (' units ')'])
+ylabel(['BAE estimation (' units ')'])
 set(gca,'fontsize',16)
 box off
 if sum(BAE_fit_R_2<BAE_fit_R_2_threshold)>0
