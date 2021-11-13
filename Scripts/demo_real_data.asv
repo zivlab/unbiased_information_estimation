@@ -393,11 +393,13 @@ if measures_to_estimate(1) % SI in bit/spike
     bias_correction_results.information.mean_SI_SSR_stability_bit_spike=mean_SI_SSR_stability_bit_spike;
     bias_correction_results.information.mean_SI_BAE_fit_R_2_bit_spike=mean_SI_BAE_fit_R_2_bit_spike;
     
-    % Average across spikes (weighted by the cells firing rates):
-    bias_correction_results.information.weighted_mean_SI_naive_bit_spike=sum(SI_naive_bit_spike_significant_cells.*average_rates_significant_cells')/sum(average_rates_significant_cells);
-    bias_correction_results.information.weighted_mean_SI_SSR_bit_spike=sum(SI_SSR_bit_spike.*average_rates_significant_cells')/sum(average_rates_significant_cells);
-    bias_correction_results.information.weighted_mean_SI_BAE_bit_spike=sum(SI_BAE_bit_spike.*average_rates_significant_cells')/sum(average_rates_significant_cells);
-    bias_correction_results.information.weighted_mean_SI_disagreement_bit_spike=sum(SI_disagreement_bit_spike.*average_rates_significant_cells')/sum(average_rates_significant_cells);
+    % Average across spike:
+    bias_correction_results.information.mean_SI_naive_bit_spike=sum(mean_SI_naive_bit_spike_significant_cells;
+    bias_correction_results.information.mean_SI_SSR_bit_spike=mean_SI_SSR_bit_spike;
+    bias_correction_results.information.mean_SI_BAE_bit_spike=mean_SI_BAE_bit_spike;
+    bias_correction_results.information.mean_SI_disagreement_bit_spike=mean_SI_disagreement_bit_spike;
+    bias_correction_results.information.mean_SI_SSR_stability_bit_spike=mean_SI_SSR_stability_bit_spike;
+    bias_correction_results.information.mean_SI_BAE_fit_R_2_bit_spike=mean_SI_BAE_fit_R_2_bit_spike;
 end
 
 if measures_to_estimate(2) % SI in bit/sec

@@ -122,7 +122,7 @@ average_rates_significant_cells=average_firing_rates(significant_active_cells_in
 active_bins_significant_cells=active_bins(significant_active_cells_indexes);
 fraction_significant_and_active_cells=length(significant_active_cells_indexes)/length(active_bins);
 fraction_of_significant_from_active_cells=length(significant_active_cells_indexes)/length(active_cells);
-spike_trian_significant_cells=simulated_spike_train(:,significant_active_cells_indexes);
+spike_train_significant_cells=simulated_spike_train(:,significant_active_cells_indexes);
 SI_true_bit_spike_significant_cells=true_information.SI_bit_spike(significant_active_cells_indexes);
 SI_true_bit_sec_significant_cells=true_information.SI_bit_sec(significant_active_cells_indexes);
 MI_true_significant_cells=true_information.MI(significant_active_cells_indexes);
@@ -147,18 +147,18 @@ disp('Computing information as a function of subsample size:')
 if measures_to_estimate(1) || measures_to_estimate(2)
     if measures_to_estimate(3) % Compute SI and MI versus sample size
         [SI_naive_bit_spike_versus_sample_size,SI_shuffle_bit_spike_versus_sample_size,SI_naive_bit_sec_versus_sample_size,SI_shuffle_bit_sec_versus_sample_size,MI_naive_versus_sample_size,MI_shuffle_versus_sample_size]=...
-            compute_information_versus_sample_size(spike_trian_significant_cells,stimulus_trace,subsample_size,dt,subsampling_repetitions,measures_to_estimate);
+            compute_information_versus_sample_size(spike_train_significant_cells,stimulus_trace,subsample_size,dt,subsampling_repetitions,measures_to_estimate);
         SI_naive_bit_spike=SI_naive_bit_spike_versus_sample_size(:,end);
         SI_naive_bit_sec=SI_naive_bit_sec_versus_sample_size(:,end);
         MI_naive=MI_naive_versus_sample_size(:,end);
         
     else % Compute only SI versus sample size
         [SI_naive_bit_spike_versus_sample_size,SI_shuffle_bit_spike_versus_sample_size,SI_naive_bit_sec_versus_sample_size,SI_shuffle_bit_sec_versus_sample_size]=...
-            compute_information_versus_sample_size(spike_trian_significant_cells,stimulus_trace,subsample_size,dt,subsampling_repetitions,measures_to_estimate);
+            compute_information_versus_sample_size(spike_train_significant_cells,stimulus_trace,subsample_size,dt,subsampling_repetitions,measures_to_estimate);
     end
 elseif measures_to_estimate(3) % Compute only MI versus sample size
     [~,~,~,~,MI_naive_versus_sample_size,MI_shuffle_versus_sample_size]=...
-        compute_information_versus_sample_size(spike_trian_significant_cells,stimulus_trace,subsample_size,dt,subsampling_repetitions,measures_to_estimate);
+        compute_information_versus_sample_size(spike_train_significant_cells,stimulus_trace,subsample_size,dt,subsampling_repetitions,measures_to_estimate);
 end
 
 %% Step 4: Correcting the bias  using the scaled shuffle reduction (SSR) and bounded extrapolation (BAE) methods:

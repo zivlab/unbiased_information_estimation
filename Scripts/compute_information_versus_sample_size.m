@@ -65,7 +65,7 @@ for n=1:length(subsample_size)
     end
     
     % Performing multiple repetitions of random subsampling for each duration:
-    display_progress_bar(['Computing information for a subsample duration of ' num2str(n) '/' num2str(length(subsample_size)) ' of the full data size: '],false);
+    display_progress_bar(['Computing information for a subsample size of ' num2str(n) '/' num2str(length(subsample_size)) ' of the full data size: '],false);
     for k=1:ceil(subsampling_repetitions*T/subsample_size(n))
         display_progress_bar(100*(k/ceil(subsampling_repetitions*T/subsample_size(n)) ),false)
         
