@@ -17,7 +17,10 @@ Sample data sets for both real and simulated data are provided in the *sample da
 
 The full data sets for both real and simulated data are provided in the *Full data set* directory.
 
-To perform the analysis on the real or simulated sample data, use the *demo_real_data.m* or *demo_simulated_data.m* script.  
+To perform the analysis on the real or simulated sample data, call the *estimate_unbiased_information.m* function.
+The settings for calling this function are defined in the *call_function_estimate_unbiased_information.m* script.
+
+An alternative option it to use the *demo_real_data.m* or *demo_simulated_data.m* scripts.  
 
 Before running the script, change the *data_pathway* to the *sample data* directory on your computer.
 
