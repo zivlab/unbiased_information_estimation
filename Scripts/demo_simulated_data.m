@@ -35,9 +35,9 @@ close all
 
 %% Choose the information measures you would like to estimate by setting their values to 1 (0 otherwise):
 
-estimate_SI_bit_spike=1;
-estimate_SI_bit_sec=1;
-estimate_MI=1;
+estimate_SI_bit_spike=1; % Choose to estimate SI (bit/spike) by setting the value to 1 (0 otherwise)
+estimate_SI_bit_sec=1; % Choose to estimate SI (bit/sec) by setting the value to 1 (0 otherwise)
+estimate_MI=1; % Choose to estimate MI by setting the value to 1 (0 otherwise)
 measures_to_estimate=[estimate_SI_bit_spike,estimate_SI_bit_sec,estimate_MI];
 
 %% Step 1 - load the spike train and stimulus trace:
@@ -52,6 +52,7 @@ true_information=temp_true_information.true_information;
 mkdir(data_path,'Sample data - results')
 mkdir(fullfile(data_path,'Sample data - results'),'Figures')
 figures_directory=[data_path '\Sample data - results\Figures'];
+plot_results=1; % 1 for plotting the results (0 otherwise)
 
 %% Step 2: Identifying significantly modulated cells by comparing the naive information with shuffles:
 
@@ -63,24 +64,25 @@ firing_rate_threshold=0; % in spike/sec.  Default value is 0, but you can choose
 num_shuffles=1000;
 significance_threshold=1; % for determining which cells are significantly tuned to the encoded variable
 
-% Computing the rate maps for shuffled spike trains:
-[rate_maps,average_firing_rates,normalized_states_distribution]=compute_rate_maps(simulated_spike_train,stimulus_trace,dt);
+% Computing the tuning curves for shuffled spike trains:
+[tuning_curves,normalized_states_distribution]=compute_tuning_curves(simulated_spike_train,stimulus_trace,dt);
 active_bins=sum(simulated_spike_train>0);
+average_firing_rates=mean(simulated_spike_train)/dt;
 active_cells=find(active_bins>=active_bins_threshold & average_firing_rates>firing_rate_threshold);
 shuffled_spike_trains=shuffle_spike_trains(simulated_spike_train(:,active_cells),num_shuffles,shuffle_type);
 
 % Indetifying significantly modulated cells:
 if measures_to_estimate(1) || measures_to_estimate(2) % based on the SI in active cells for naive versus shuffle
     % naive SI:
-    [SI_naive_bit_spike,SI_naive_bit_sec]=compute_SI(average_firing_rates(active_cells),rate_maps(active_cells,:),normalized_states_distribution);
+    [SI_naive_bit_spike,SI_naive_bit_sec]=compute_SI(average_firing_rates(active_cells),tuning_curves(active_cells,:),normalized_states_distribution);
     
     % shuffle SI:
     SI_shuffle_bit_spike=nan(length(active_cells),num_shuffles);
     display_progress_bar('Computing shuffle information for the significance test: ',false)
     for n=1:num_shuffles
         display_progress_bar(100*(n/num_shuffles),false)
-        [temp_shuffled_rate_maps,~,~]=compute_rate_maps(shuffled_spike_trains(:,:,n),stimulus_trace,dt);
-        [SI_shuffle_bit_spike(:,n),~]=compute_SI(average_firing_rates(active_cells),temp_shuffled_rate_maps,normalized_states_distribution);
+        [temp_shuffled_tuning_curves,~]=compute_tuning_curves(shuffled_spike_trains(:,:,n),stimulus_trace,dt);
+        [SI_shuffle_bit_spike(:,n),~]=compute_SI(average_firing_rates(active_cells),temp_shuffled_tuning_curves,normalized_states_distribution);
     end
     display_progress_bar(' done',false)
     display_progress_bar('',true)
@@ -147,10 +149,7 @@ disp('Computing information as a function of subsample size:')
 if measures_to_estimate(1) || measures_to_estimate(2)
     if measures_to_estimate(3) % Compute SI and MI versus sample size
         [SI_naive_bit_spike_versus_sample_size,SI_shuffle_bit_spike_versus_sample_size,SI_naive_bit_sec_versus_sample_size,SI_shuffle_bit_sec_versus_sample_size,MI_naive_versus_sample_size,MI_shuffle_versus_sample_size]=...
-            compute_information_versus_sample_size(spike_train_significant_cells,stimulus_trace,subsample_size,dt,subsampling_repetitions,measures_to_estimate);
-        SI_naive_bit_spike=SI_naive_bit_spike_versus_sample_size(:,end);
-        SI_naive_bit_sec=SI_naive_bit_sec_versus_sample_size(:,end);
-        MI_naive=MI_naive_versus_sample_size(:,end);
+            compute_information_versus_sample_size(spike_train_significant_cells,stimulus_trace,subsample_size,dt,subsampling_repetitions,measures_to_estimate);     
         
     else % Compute only SI versus sample size
         [SI_naive_bit_spike_versus_sample_size,SI_shuffle_bit_spike_versus_sample_size,SI_naive_bit_sec_versus_sample_size,SI_shuffle_bit_sec_versus_sample_size]=...
@@ -161,13 +160,7 @@ elseif measures_to_estimate(3) % Compute only MI versus sample size
         compute_information_versus_sample_size(spike_train_significant_cells,stimulus_trace,subsample_size,dt,subsampling_repetitions,measures_to_estimate);
 end
 
-%% Step 4: Correcting the bias  using the scaled shuffle reduction (SSR) and bounded extrapolation (BAE) methods:
-
-% Thresholds for producing warnings:
-SSR_stability_threshold=0.95;
-BAE_fit_R_2_threshold=0.95;
-mean_SSR_stability_threshold=0.98;
-mean_BAE_fit_R_2_threshold=0.98;
+%% Step 4: Correcting the bias using the scaled shuffle reduction (SSR) and bounded extrapolation (BAE) methods:
 
 % Correcting the bias for SI in bit/spike:
 if measures_to_estimate(1)
@@ -175,11 +168,11 @@ if measures_to_estimate(1)
     
     % SSR method:
     [SI_SSR_bit_spike,mean_SI_SSR_bit_spike,SI_SSR_stability_bit_spike,mean_SI_SSR_stability_bit_spike]...
-        =perform_SSR_simulated_data(SI_naive_bit_spike_versus_sample_size,SI_shuffle_bit_spike_versus_sample_size,SI_true_bit_spike_significant_cells,subsample_size,units,SSR_stability_threshold,mean_SSR_stability_threshold,figures_directory);
+        =perform_SSR_simulated_data(SI_naive_bit_spike_versus_sample_size,SI_shuffle_bit_spike_versus_sample_size,SI_true_bit_spike_significant_cells,subsample_size,units,figures_directory,plot_results);
     
     % BAE method:
     [SI_BAE_bit_spike,mean_SI_BAE_bit_spike,SI_BAE_fit_R_2_bit_spike,mean_SI_BAE_fit_R_2_bit_spike]...
-        =perform_BAE_simulated_data(SI_naive_bit_spike_versus_sample_size,SI_true_bit_spike_significant_cells,subsample_size,units,BAE_fit_R_2_threshold,mean_BAE_fit_R_2_threshold,figures_directory);
+        =perform_BAE_simulated_data(SI_naive_bit_spike_versus_sample_size,SI_true_bit_spike_significant_cells,subsample_size,units,figures_directory,plot_results);
     
     SI_disagreement_bit_spike=SI_BAE_bit_spike-SI_SSR_bit_spike;
     mean_SI_disagreement_bit_spike=mean_SI_BAE_bit_spike-mean_SI_SSR_bit_spike;
@@ -191,11 +184,11 @@ if measures_to_estimate(2)
     
     % SSR method:
     [SI_SSR_bit_sec,mean_SI_SSR_bit_sec,SI_SSR_stability_bit_sec,mean_SI_SSR_stability_bit_sec]...
-        =perform_SSR_simulated_data(SI_naive_bit_sec_versus_sample_size,SI_shuffle_bit_sec_versus_sample_size,SI_true_bit_sec_significant_cells,subsample_size,units,SSR_stability_threshold,mean_SSR_stability_threshold,figures_directory);
+        =perform_SSR_simulated_data(SI_naive_bit_sec_versus_sample_size,SI_shuffle_bit_sec_versus_sample_size,SI_true_bit_sec_significant_cells,subsample_size,units,figures_directory,plot_results);
     
     % BAE method:
     [SI_BAE_bit_sec, mean_SI_BAE_bit_sec,SI_BAE_fit_R_2_bit_sec,mean_SI_BAE_fit_R_2_bit_sec]...
-        =perform_BAE_simulated_data(SI_naive_bit_sec_versus_sample_size,SI_true_bit_sec_significant_cells,subsample_size,units,BAE_fit_R_2_threshold,mean_BAE_fit_R_2_threshold,figures_directory);
+        =perform_BAE_simulated_data(SI_naive_bit_sec_versus_sample_size,SI_true_bit_sec_significant_cells,subsample_size,units,figures_directory,plot_results);
     
     SI_disagreement_bit_sec=SI_BAE_bit_sec-SI_SSR_bit_sec;
     mean_SI_disagreement_bit_sec=mean_SI_BAE_bit_sec-mean_SI_SSR_bit_sec;
@@ -207,11 +200,11 @@ if measures_to_estimate(3)
     
     % SSR method:
     [MI_SSR,mean_MI_SSR,MI_SSR_stability,mean_MI_SSR_stability]...
-        =perform_SSR_simulated_data(MI_naive_versus_sample_size,MI_shuffle_versus_sample_size,MI_true_significant_cells,subsample_size,units,SSR_stability_threshold,mean_SSR_stability_threshold,figures_directory);
+        =perform_SSR_simulated_data(MI_naive_versus_sample_size,MI_shuffle_versus_sample_size,MI_true_significant_cells,subsample_size,units,figures_directory,plot_results);
     
     % BAE method:
     [MI_BAE, mean_MI_BAE,MI_BAE_fit_R_2,mean_MI_BAE_fit_R_2]...
-        =perform_BAE_simulated_data(MI_naive_versus_sample_size,MI_true_significant_cells,subsample_size,units,BAE_fit_R_2_threshold,mean_BAE_fit_R_2_threshold,figures_directory);
+        =perform_BAE_simulated_data(MI_naive_versus_sample_size,MI_true_significant_cells,subsample_size,units,figures_directory,plot_results);
     
     MI_disagreement=MI_BAE-MI_SSR;
     mean_MI_disagreement=mean_MI_BAE-mean_MI_SSR;

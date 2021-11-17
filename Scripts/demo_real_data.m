@@ -35,9 +35,9 @@ close all
 
 %% Choose the information measures you would like to estimate by setting their values to 1 (0 otherwise):
 
-estimate_SI_bit_spike=1;
-estimate_SI_bit_sec=1;
-estimate_MI=1;
+estimate_SI_bit_spike=1; % Choose to estimate SI (bit/spike) by setting the value to 1 (0 otherwise)
+estimate_SI_bit_sec=1; % Choose to estimate SI (bit/sec) by setting the value to 1 (0 otherwise)
+estimate_MI=1; % Choose to estimate MI by setting the value to 1 (0 otherwise)
 measures_to_estimate=[estimate_SI_bit_spike,estimate_SI_bit_sec,estimate_MI];
 
 %% Step 1 - load the spike train and stimulus trace:
@@ -50,35 +50,37 @@ stimulus_trace=temp_stimulus_trace.stimulus_trace;
 mkdir(data_path,'Sample data - results')
 mkdir(fullfile(data_path,'Sample data - results'),'Figures')
 figures_directory=[data_path '\Sample data - results\Figures'];
+plot_results=1; % 1 for plotting the results (0 otherwise)
 
 %% Step 2: Identifying significantly modulated cells by comparing the naive information with shuffles:
 
 % Setting the parameters and which cells to analyze:
-dt=1/20; % in units of seconds
-shuffle_type='cyclic'; % permutations can be either 'cyclic' or 'random'
+dt=1/20; % time bin in units of seconds
+shuffle_type='cyclic'; % permutations used for the significance test can be either 'cyclic' or 'random'
 active_bins_threshold=10; % minimal number of time bins in which the cell is defined active - less than 10 active time bins leads to an inaccurate estimation
 firing_rate_threshold=0; % in spike/sec.  Default value is 0, but you can choose to add an average firng rate threshold
 num_shuffles=1000;
 significance_threshold=0.05; % for determining which cells are significantly tuned to the encoded variable
 
-% Computing the rate maps for shuffled spike trains:
-[rate_maps,average_firing_rates,normalized_states_distribution]=compute_rate_maps(spike_train,stimulus_trace,dt);
+% Computing the tuning curves for shuffled spike trains:
+[tuning_curves,normalized_states_distribution]=compute_tuning_curves(spike_train,stimulus_trace,dt);
 active_bins=sum(spike_train>0);
+average_firing_rates=mean(spike_train)/dt;
 active_cells=find(active_bins>=active_bins_threshold & average_firing_rates>firing_rate_threshold);
 shuffled_spike_trains=shuffle_spike_trains(spike_train(:,active_cells),num_shuffles,shuffle_type);
 
 % Indetifying significantly modulated cells:
 if measures_to_estimate(1) || measures_to_estimate(2) % based on the SI in active cells for naive versus shuffle
     % naive SI:
-    [SI_naive_bit_spike,SI_naive_bit_sec]=compute_SI(average_firing_rates(active_cells),rate_maps(active_cells,:),normalized_states_distribution);
+    [SI_naive_bit_spike,SI_naive_bit_sec]=compute_SI(average_firing_rates(active_cells),tuning_curves(active_cells,:),normalized_states_distribution);
     
     % shuffle SI:
     SI_shuffle_bit_spike=nan(length(active_cells),num_shuffles);
     display_progress_bar('Computing shuffle information for the significance test: ',false)
     for n=1:num_shuffles
         display_progress_bar(100*(n/num_shuffles),false)
-        [temp_shuffled_rate_maps,~,~]=compute_rate_maps(shuffled_spike_trains(:,:,n),stimulus_trace,dt);
-        [SI_shuffle_bit_spike(:,n),~]=compute_SI(average_firing_rates(active_cells),temp_shuffled_rate_maps,normalized_states_distribution);
+        [temp_shuffled_tuning_curves,~]=compute_tuning_curves(shuffled_spike_trains(:,:,n),stimulus_trace,dt);
+        [SI_shuffle_bit_spike(:,n),~]=compute_SI(average_firing_rates(active_cells),temp_shuffled_tuning_curves,normalized_states_distribution);
     end
     display_progress_bar(' done',false)
     display_progress_bar('',true)
@@ -128,21 +130,17 @@ if (measures_to_estimate(1) || measures_to_estimate(2)) && measures_to_estimate(
     mean_MI_naive_significant_cells=mean(MI_naive_significant_cells,'omitnan');
 end
 
-
 %% Step 3: Calculating the naive and shuffle information as a function of sample size:
 
 subsampling_repetitions=100; % number of repetitions in the subsampling of the data
 T=size(spike_train,1); % total number of samples
-subsample_size=(0.1:0.1:1)*T; % subsamples with size of different fractions of the data
+subsample_size=(0.05:0.05:1)*T; % subsamples with size of different fractions of the data
 
 disp('Computing information as a function of subsample size:')
 if measures_to_estimate(1) || measures_to_estimate(2) 
     if measures_to_estimate(3) % Compute SI and MI versus sample size
         [SI_naive_bit_spike_versus_sample_size,SI_shuffle_bit_spike_versus_sample_size,SI_naive_bit_sec_versus_sample_size,SI_shuffle_bit_sec_versus_sample_size,MI_naive_versus_sample_size,MI_shuffle_versus_sample_size]=...
-            compute_information_versus_sample_size(spike_train_significant_cells,stimulus_trace,subsample_size,dt,subsampling_repetitions,measures_to_estimate);
-        SI_naive_bit_spike=SI_naive_bit_spike_versus_sample_size(:,end);
-        SI_naive_bit_sec=SI_naive_bit_sec_versus_sample_size(:,end);
-        MI_naive=MI_naive_versus_sample_size(:,end);
+            compute_information_versus_sample_size(spike_train_significant_cells,stimulus_trace,subsample_size,dt,subsampling_repetitions,measures_to_estimate);  
 
     else % Compute only SI versus sample size
         [SI_naive_bit_spike_versus_sample_size,SI_shuffle_bit_spike_versus_sample_size,SI_naive_bit_sec_versus_sample_size,SI_shuffle_bit_sec_versus_sample_size]=...
@@ -153,13 +151,7 @@ elseif measures_to_estimate(3) % Compute only MI versus sample size
         compute_information_versus_sample_size(spike_train_significant_cells,stimulus_trace,subsample_size,dt,subsampling_repetitions,measures_to_estimate);
 end
 
-%% Step 4: Correcting the bias  using the scaled shuffle reduction (SSR) and bounded asymptotic extrapolation (BAE) methods:
-
-% Thresholds for producing warnings:
-SSR_stability_threshold=0.95;
-BAE_fit_R_2_threshold=0.95;
-mean_SSR_stability_threshold=0.98;
-mean_BAE_fit_R_2_threshold=0.98;
+%% Step 4: Correcting the bias using the scaled shuffle reduction (SSR) and bounded asymptotic extrapolation (BAE) methods:
 
 % Correcting the bias for SI in bit/spike:
 if measures_to_estimate(1)
@@ -167,11 +159,11 @@ if measures_to_estimate(1)
     
     % SSR method:
     [SI_SSR_bit_spike,mean_SI_SSR_bit_spike,SI_SSR_stability_bit_spike,mean_SI_SSR_stability_bit_spike]...
-        =perform_SSR(SI_naive_bit_spike_versus_sample_size,SI_shuffle_bit_spike_versus_sample_size,subsample_size,units,SSR_stability_threshold,mean_SSR_stability_threshold,figures_directory);
+        =perform_SSR(SI_naive_bit_spike_versus_sample_size,SI_shuffle_bit_spike_versus_sample_size,subsample_size,units,figures_directory,plot_results);
     
     % BAE method:
     [SI_BAE_bit_spike,mean_SI_BAE_bit_spike,SI_BAE_fit_R_2_bit_spike,mean_SI_BAE_fit_R_2_bit_spike]...
-        =perform_BAE(SI_naive_bit_spike_versus_sample_size,subsample_size,units,BAE_fit_R_2_threshold,mean_BAE_fit_R_2_threshold,figures_directory);
+        =perform_BAE(SI_naive_bit_spike_versus_sample_size,subsample_size,units,figures_directory,plot_results);
     
     SI_disagreement_bit_spike=SI_BAE_bit_spike-SI_SSR_bit_spike;
     mean_SI_disagreement_bit_spike=mean_SI_BAE_bit_spike-mean_SI_SSR_bit_spike;
@@ -183,11 +175,11 @@ if measures_to_estimate(2)
     
     % SSR method:
     [SI_SSR_bit_sec,mean_SI_SSR_bit_sec,SI_SSR_stability_bit_sec,mean_SI_SSR_stability_bit_sec]...
-        =perform_SSR(SI_naive_bit_sec_versus_sample_size,SI_shuffle_bit_sec_versus_sample_size,subsample_size,units,SSR_stability_threshold,mean_SSR_stability_threshold,figures_directory);
+        =perform_SSR(SI_naive_bit_sec_versus_sample_size,SI_shuffle_bit_sec_versus_sample_size,subsample_size,units,figures_directory,plot_results);
     
     % BAE method:
     [SI_BAE_bit_sec, mean_SI_BAE_bit_sec,SI_BAE_fit_R_2_bit_sec,mean_SI_BAE_fit_R_2_bit_sec]...
-        =perform_BAE(SI_naive_bit_sec_versus_sample_size,subsample_size,units,BAE_fit_R_2_threshold,mean_BAE_fit_R_2_threshold,figures_directory);
+        =perform_BAE(SI_naive_bit_sec_versus_sample_size,subsample_size,units,figures_directory,plot_results);
     
     SI_disagreement_bit_sec=SI_BAE_bit_sec-SI_SSR_bit_sec;
     mean_SI_disagreement_bit_sec=mean_SI_BAE_bit_sec-mean_SI_SSR_bit_sec;
@@ -199,157 +191,117 @@ if measures_to_estimate(3)
     
     % SSR method:
     [MI_SSR,mean_MI_SSR,MI_SSR_stability,mean_MI_SSR_stability]...
-        =perform_SSR(MI_naive_versus_sample_size,MI_shuffle_versus_sample_size,subsample_size,units,SSR_stability_threshold,mean_SSR_stability_threshold,figures_directory);
+        =perform_SSR(MI_naive_versus_sample_size,MI_shuffle_versus_sample_size,subsample_size,units,figures_directory,plot_results);
     
     % BAE method:
-    [MI_BAE_, mean_MI_BAE_,MI_BAE_fit_R_2,mean_MI_BAE_fit_R_2]...
-        =perform_BAE(MI_naive_versus_sample_size,subsample_size,units,BAE_fit_R_2_threshold,mean_BAE_fit_R_2_threshold,figures_directory);
+    [MI_BAE, mean_MI_BAE,MI_BAE_fit_R_2,mean_MI_BAE_fit_R_2]...
+        =perform_BAE(MI_naive_versus_sample_size,subsample_size,units,figures_directory,plot_results);
     
-    MI_disagreement=MI_BAE_-MI_SSR;
-    mean_MI_disagreement=mean_MI_BAE_-mean_MI_SSR;
+    MI_disagreement=MI_BAE-MI_SSR;
+    mean_MI_disagreement=mean_MI_BAE-mean_MI_SSR;
 end
 
 %% Plotting the cross-validation between the SSR and BAE methods and estimation quality measures:
 
-if measures_to_estimate(1) % for SI in bit/spike
-    
-    % Cross validation:
-    unstable_estimation_or_inaccurate_fit=union(find(SI_SSR_stability_bit_spike<SSR_stability_threshold),find(SI_BAE_fit_R_2_bit_spike<BAE_fit_R_2_threshold));
-    figure
-    plot(SI_SSR_bit_spike,SI_BAE_bit_spike,'.','markersize',15,'color','b')
-    hold on
-    plot(SI_SSR_bit_spike(unstable_estimation_or_inaccurate_fit),SI_BAE_bit_spike(unstable_estimation_or_inaccurate_fit),'.','markersize',15,'color',[0.5 0.5 0.5])
-    plot([0 1.1*max(SI_BAE_bit_spike)],[0 1.1*max(SI_BAE_bit_spike)],'--k','linewidth',2)
-    xlim([0 1.1*max(SI_BAE_bit_spike)])
-    ylim([0 1.1*max(SI_BAE_bit_spike)])
-    axis square
-    xlabel('SSR estimation (bit/spike)')
-    ylabel('BAE estimation (bit/spike)')
-    title('SI (bit/spike)')
-    if ~isempty(unstable_estimation_or_inaccurate_fit)
-        legend('Stable and accurate','Unstable or inaccurate','Location','northwest')
-        legend boxoff
+if plot_results
+    if measures_to_estimate(1) % for SI in bit/spike
+        
+        % Cross validation:
+        figure
+        plot(SI_SSR_bit_spike,SI_BAE_bit_spike,'.','markersize',15,'color','b')
+        hold on
+        plot([0 1.1*max(SI_BAE_bit_spike)],[0 1.1*max(SI_BAE_bit_spike)],'--k','linewidth',2)
+        xlim([0 1.1*max(SI_BAE_bit_spike)])
+        ylim([0 1.1*max(SI_BAE_bit_spike)])
+        axis square
+        xlabel('SSR estimation (bit/spike)')
+        ylabel('BAE estimation (bit/spike)')
+        title('SI (bit/spike)')
+        set(gca,'fontsize',16)
+        box off
+        savefig(fullfile(figures_directory,'BAE versus SSR - SI bit per spike.fig'))
+        saveas(gcf,fullfile(figures_directory,'BAE versus SSR - SI bit per spike'),'png')
+        
+        % Estimation quality
+        figure
+        plot(SI_SSR_stability_bit_spike,SI_BAE_fit_R_2_bit_spike,'.','markersize',15,'color','b')
+        xlim([0 1])
+        ylim([0 1])
+        axis square
+        xlabel('SSR stability')
+        ylabel('BAE fit R^2')
+        title('SI (bit/spike)')
+        set(gca,'fontsize',16)
+        box off
+        savefig(fullfile(figures_directory,'Estimation quality - SI bit per spike.fig'))
+        saveas(gcf,fullfile(figures_directory,'Estimation quality - SI bit per spike'),'png')
     end
-    set(gca,'fontsize',16)
-    box off
-    savefig(fullfile(figures_directory,'BAE versus SSR - SI bit per spike.fig'))
-    saveas(gcf,fullfile(figures_directory,'BAE versus SSR - SI bit per spike'),'png')
     
-    % Estimation quality
-    figure
-    plot(SI_SSR_stability_bit_spike,SI_BAE_fit_R_2_bit_spike,'.','markersize',15,'color','b')
-    hold on
-    plot(SI_SSR_stability_bit_spike(unstable_estimation_or_inaccurate_fit),SI_BAE_fit_R_2_bit_spike(unstable_estimation_or_inaccurate_fit),'.','markersize',15,'color',[0.5 0.5 0.5])
-    plot([SSR_stability_threshold SSR_stability_threshold],[0 1],'--k','linewidth',2)
-    plot([0 1],[BAE_fit_R_2_threshold BAE_fit_R_2_threshold],'--k','linewidth',2)
-    xlim([0.8 1])
-    ylim([0.8 1])
-    axis square
-    xlabel('SSR stability')
-    ylabel('BAE fit R^2')
-    title('SI (bit/spike)')
-    if ~isempty(unstable_estimation_or_inaccurate_fit)
-        legend('Stable and accurate','Unstable or inaccurate','Location','southwest')
-        legend boxoff
+    if measures_to_estimate(2) % for SI in bit/sec
+        
+        % Cross validation:
+        figure
+        plot(SI_SSR_bit_sec,SI_BAE_bit_sec,'.','markersize',15,'color','b')
+        hold on
+        plot([0 1.1*max(SI_BAE_bit_sec)],[0 1.1*max(SI_BAE_bit_sec)],'--k','linewidth',2)
+        xlim([0 1.1*max(SI_BAE_bit_sec)])
+        ylim([0 1.1*max(SI_BAE_bit_sec)])
+        axis square
+        xlabel('SSR estimation (bit/sec)')
+        ylabel('BAE estimation (bit/sec)')
+        title('SI (bit/sec)')
+        set(gca,'fontsize',16)
+        box off
+        savefig(fullfile(figures_directory,'BAE versus SSR - SI bit per sec.fig'))
+        saveas(gcf,fullfile(figures_directory,'BAE versus SSR - SI bit per sec'),'png')
+        
+        % Estimation quality
+        figure
+        plot(SI_SSR_stability_bit_sec,SI_BAE_fit_R_2_bit_sec,'.','markersize',15,'color','b')
+        xlim([0 1])
+        ylim([0 1])
+        axis square
+        xlabel('SSR stability')
+        ylabel('BAE fit R^2')
+        title('SI (bit/sec)')
+        set(gca,'fontsize',16)
+        box off
+        savefig(fullfile(figures_directory,'Estimation quality - SI bit per sec.fig'))
+        saveas(gcf,fullfile(figures_directory,'Estimation quality - SI bit per sec'),'png')
     end
-    set(gca,'fontsize',16)
-    box off
-    savefig(fullfile(figures_directory,'Estimation quality - SI bit per spike.fig'))
-    saveas(gcf,fullfile(figures_directory,'Estimation quality - SI bit per spike'),'png')
-end
-
-if measures_to_estimate(2) % for SI in bit/sec
     
-    % Cross validation:
-    unstable_estimation_or_inaccurate_fit=union(find(SI_SSR_stability_bit_sec<SSR_stability_threshold),find(SI_BAE_fit_R_2_bit_sec<BAE_fit_R_2_threshold));
-    figure
-    plot(SI_SSR_bit_sec,SI_BAE_bit_sec,'.','markersize',15,'color','b')
-    hold on
-    plot(SI_SSR_bit_sec(unstable_estimation_or_inaccurate_fit),SI_BAE_bit_sec(unstable_estimation_or_inaccurate_fit),'.','markersize',15,'color',[0.5 0.5 0.5])
-    plot([0 1.1*max(SI_BAE_bit_sec)],[0 1.1*max(SI_BAE_bit_sec)],'--k','linewidth',2)
-    xlim([0 1.1*max(SI_BAE_bit_sec)])
-    ylim([0 1.1*max(SI_BAE_bit_sec)])
-    axis square
-    xlabel('SSR estimation (bit/sec)')
-    ylabel('BAE estimation (bit/sec)')
-    title('SI (bit/sec)')
-    if ~isempty(unstable_estimation_or_inaccurate_fit)
-        legend('Stable and accurate','Unstable or inaccurate','Location','northwest')
-        legend boxoff
+    if measures_to_estimate(3) % for MI
+        
+        % Cross validation:
+        figure
+        plot(MI_SSR,MI_BAE,'.','markersize',15,'color','b')
+        hold on
+        plot([0 1.1*max(MI_BAE)],[0 1.1*max(MI_BAE)],'--k','linewidth',2)
+        xlim([0 1.1*max(MI_BAE)])
+        ylim([0 1.1*max(MI_BAE)])
+        axis square
+        xlabel('SSR estimation (bit)')
+        ylabel('BAE estimation (bit)')
+        title('MI')
+        set(gca,'fontsize',16)
+        box off
+        savefig(fullfile(figures_directory,'BAE versus SSR - MI.fig'))
+        saveas(gcf,fullfile(figures_directory,'BAE versus SSR - MI'),'png')
+        
+        % Estimation quality
+        figure
+        plot(MI_SSR_stability,MI_BAE_fit_R_2,'.','markersize',15,'color','b')
+        xlim([0 1])
+        ylim([0 1])
+        axis square
+        xlabel('SSR stability')
+        ylabel('BAE fit R^2')
+        title('MI')
+        set(gca,'fontsize',16)
+        box off
+        savefig(fullfile(figures_directory,'Estimation quality - MI.fig'))
+        saveas(gcf,fullfile(figures_directory,'Estimation quality - MI'),'png')
     end
-    set(gca,'fontsize',16)
-    box off
-    savefig(fullfile(figures_directory,'BAE versus SSR - SI bit per sec.fig'))
-    saveas(gcf,fullfile(figures_directory,'BAE versus SSR - SI bit per sec'),'png')
-    
-    % Estimation quality
-    figure
-    plot(SI_SSR_stability_bit_sec,SI_BAE_fit_R_2_bit_sec,'.','markersize',15,'color','b')
-    hold on
-    plot(SI_SSR_stability_bit_sec(unstable_estimation_or_inaccurate_fit),SI_BAE_fit_R_2_bit_sec(unstable_estimation_or_inaccurate_fit),'.','markersize',15,'color',[0.5 0.5 0.5])
-    plot([SSR_stability_threshold SSR_stability_threshold],[0 1],'--k','linewidth',2)
-    plot([0 1],[BAE_fit_R_2_threshold BAE_fit_R_2_threshold],'--k','linewidth',2)
-    xlim([0.8 1])
-    ylim([0.8 1])
-    axis square
-    xlabel('SSR stability')
-    ylabel('BAE fit R^2')
-    title('SI (bit/sec)')
-    if ~isempty(unstable_estimation_or_inaccurate_fit)
-        legend('Stable and accurate','Unstable or inaccurate','Location','southwest')
-        legend boxoff
-    end
-    set(gca,'fontsize',16)
-    box off
-    savefig(fullfile(figures_directory,'Estimation quality - SI bit per sec.fig'))
-    saveas(gcf,fullfile(figures_directory,'Estimation quality - SI bit per sec'),'png')
-end
-
-if measures_to_estimate(3) % for MI
-    
-    % Cross validation:
-    figure
-    unstable_estimation_or_inaccurate_fit=union(find(MI_SSR_stability<SSR_stability_threshold),find(MI_BAE_fit_R_2<BAE_fit_R_2_threshold));
-    plot(MI_SSR,MI_BAE_,'.','markersize',15,'color','b')
-    hold on
-    plot(MI_SSR(unstable_estimation_or_inaccurate_fit),MI_BAE_(unstable_estimation_or_inaccurate_fit),'.','markersize',15,'color',[0.5 0.5 0.5])
-    plot([0 1.1*max(MI_BAE_)],[0 1.1*max(MI_BAE_)],'--k','linewidth',2)
-    xlim([0 1.1*max(MI_BAE_)])
-    ylim([0 1.1*max(MI_BAE_)])
-    axis square
-    xlabel('SSR estimation (bit)')
-    ylabel('BAE estimation (bit)')
-    title('MI')
-    if ~isempty(unstable_estimation_or_inaccurate_fit)
-        legend('Stable and accurate','Unstable or inaccurate','Location','northwest')
-        legend boxoff
-    end
-    set(gca,'fontsize',16)
-    box off
-    savefig(fullfile(figures_directory,'BAE versus SSR - MI.fig'))
-    saveas(gcf,fullfile(figures_directory,'BAE versus SSR - MI'),'png')
-    
-    % Estimation quality
-    figure
-    plot(MI_SSR_stability,MI_BAE_fit_R_2,'.','markersize',15,'color','b')
-    hold on
-    plot(MI_SSR_stability(unstable_estimation_or_inaccurate_fit),MI_BAE_fit_R_2(unstable_estimation_or_inaccurate_fit),'.','markersize',15,'color',[0.5 0.5 0.5])
-    plot([SSR_stability_threshold SSR_stability_threshold],[0 1],'--k','linewidth',2)
-    plot([0 1],[BAE_fit_R_2_threshold BAE_fit_R_2_threshold],'--k','linewidth',2)
-    xlim([0.8 1])
-    ylim([0.8 1])
-    axis square
-    xlabel('SSR stability')
-    ylabel('BAE fit R^2')
-    title('MI')
-    if ~isempty(unstable_estimation_or_inaccurate_fit)
-        legend('Stable and accurate','Unstable or inaccurate','Location','southwest')
-        legend boxoff
-    end
-    set(gca,'fontsize',16)
-    box off
-    savefig(fullfile(figures_directory,'Estimation quality - MI.fig'))
-    saveas(gcf,fullfile(figures_directory,'Estimation quality - MI'),'png')
 end
 
 %% Saving the final results in a single data structure:
@@ -422,7 +374,7 @@ if measures_to_estimate(3) % MI
     % For individual cells:
     bias_correction_results.information.MI_naive=MI_naive_significant_cells;
     bias_correction_results.information.MI_SSR=MI_SSR;
-    bias_correction_results.information.MI_BAE_=MI_BAE_;
+    bias_correction_results.information.MI_BAE_=MI_BAE;
     bias_correction_results.information.MI_disagreement=MI_disagreement;
     bias_correction_results.information.MI_SSR_stability=MI_SSR_stability;
     bias_correction_results.information.MI_BAE_fit_R_2=MI_BAE_fit_R_2;
@@ -430,7 +382,7 @@ if measures_to_estimate(3) % MI
     % Average across the population:
     bias_correction_results.information.mean_MI_naive=mean_MI_naive_significant_cells;
     bias_correction_results.information.mean_MI_SSR=mean_MI_SSR;
-    bias_correction_results.information.mean_MI_BAE_=mean_MI_BAE_;
+    bias_correction_results.information.mean_MI_BAE_=mean_MI_BAE;
     bias_correction_results.information.mean_MI_disagreement=mean_MI_disagreement;
     bias_correction_results.information.mean_MI_SSR_stability=mean_MI_SSR_stability;
     bias_correction_results.information.mean_MI_BAE_fit_R_2=mean_MI_BAE_fit_R_2;

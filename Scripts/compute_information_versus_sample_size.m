@@ -76,14 +76,16 @@ for n=1:length(subsample_size)
         
         if measures_to_estimate(1) || measures_to_estimate(2)
             % computing SI for the subsampled rate maps:
-            [temp_rate_maps,temp_firing_rates,temp_normalized_states_distribution]=compute_rate_maps(spike_train(this_subsample_indexes,:),stimulus_trace(this_subsample_indexes),dt);
-            [temp_SI_bit_spike,temp_SI_bit_sec]=compute_SI(temp_firing_rates,temp_rate_maps,temp_normalized_states_distribution);
+            [temp_tuning_curves,temp_normalized_states_distribution]=compute_tuning_curves(spike_train(this_subsample_indexes,:),stimulus_trace(this_subsample_indexes),dt);
+            temp_firing_rates=mean(spike_train(this_subsample_indexes,:))/dt;
+            [temp_SI_bit_spike,temp_SI_bit_sec]=compute_SI(temp_firing_rates,temp_tuning_curves,temp_normalized_states_distribution);
             this_subsample_size_SI_bit_spike(:,k)=temp_SI_bit_spike;
             this_subsample_size_SI_bit_sec(:,k)=temp_SI_bit_sec;
             
             % computing SI for the shuffled subsample:
-            [temp_shuffled_rate_maps,temp_shuffle_firing_rates,~]=compute_rate_maps(shuffled_spike_trains,stimulus_trace(this_subsample_indexes),dt);
-            [temp_shuffle_information_bit_spike,temp_shuffle_information_bit_sec]=compute_SI(temp_shuffle_firing_rates,temp_shuffled_rate_maps,temp_normalized_states_distribution);
+            [temp_shuffled_tuning_curves,~]=compute_tuning_curves(shuffled_spike_trains,stimulus_trace(this_subsample_indexes),dt);
+            temp_shuffle_firing_rates=mean(shuffled_spike_trains)/dt;
+            [temp_shuffle_information_bit_spike,temp_shuffle_information_bit_sec]=compute_SI(temp_shuffle_firing_rates,temp_shuffled_tuning_curves,temp_normalized_states_distribution);
             this_subsample_size_SI_shuffle_bit_spike(:,k)=temp_shuffle_information_bit_spike;
             this_subsample_size_SI_shuffle_bit_sec(:,k)=temp_shuffle_information_bit_sec;
         end

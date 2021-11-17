@@ -1,8 +1,8 @@
-function [BAE_information,mean_BAE_information,BAE_fit_R_2,BAE_fit_R_2_mean]=perform_BAE(information_versus_sample_size,subsample_size,units,BAE_fit_R_2_threshold,mean_BAE_fit_R_2_threshold,figures_directory)
+function [BAE_information,mean_BAE_information,BAE_fit_R_2,BAE_fit_R_2_mean]=perform_BAE(information_versus_sample_size,subsample_size,units,figures_directory,plot_results)
 % This functions corrects the upward bias in the naive calculation of
 % information content for limited sample sizes using the bounded asymptotic extrapolation (BAE) method.
 % BAE is based on fitting the function of how the information changes with sample size and extrapolating it to infinity.
-% The obtained results are compared against the unbounded aymptotic extrapolation (AE) method. 
+% The obtained results are compared against the unbounded aymptotic extrapolation (AE) method.
 
 % Inputs:
 % 1. information_versus_sample_size - Matrix of size TxN with the estimated
@@ -10,9 +10,8 @@ function [BAE_information,mean_BAE_information,BAE_fit_R_2,BAE_fit_R_2_mean]=per
 % sizes.
 % 2. subsample_size - Vector of T different sample sizes
 % 3. units - Either bit/spike, bit/sec, or bit
-% 4. BAE_fit_R_2_threshold - warning for unstable estiamtion for individual cells 
-% 5. populaiton_BAE_fit_R_2_threshold - warning for unstable estiamtion for the mean
-% 6. figures_directory - Path to save the results figure
+% 5. figures_directory - Path to save the results figure
+% 6. plot_results - 1 for plotting and 0 for not
 
 % Outputs:
 % 1. BAE_information - Vector of size N with the estimated
@@ -79,79 +78,66 @@ for n=1:N
 end
 
 % plotting the mean average results for the extrapolation method:
-figure
-plot(subsample_size/subsample_size(end),mean_information_versus_sample_size,'ob','linewidth',2)
-hold on
-plot(subsample_size/subsample_size(end),AE_fitted_model,'-','color',[1 0.5 0],'linewidth',2)
-plot([0 1],[AE_fit_params(1) AE_fit_params(1)],'--','color',[1 0.5 0],'linewidth',2)
-plot(subsample_size/subsample_size(end),BAE_fitted_model,'-g','linewidth',2)
-plot([0 1],[mean_BAE_fit_params(1) mean_BAE_fit_params(1)],'--g','linewidth',2)
-plot(subsample_size/subsample_size(end),mean_information_versus_sample_size,'ob','linewidth',2)
-xlim([0 1])
-ylim([0 ceil(mean_information_versus_sample_size(1))])
-if strcmp(units,'bit')
-    ylim([0 1.1*mean_information_versus_sample_size(1)])
-end
-xlabel('Subsample fraction')
-if strcmp(units,'bit/spike') || strcmp(units,'bit/sec')
-    ylabel(['SI (' units ')'])
-else
-    ylabel(['MI (' units ')'])
-end
-legend('Naive','AE fitted model','AE estimation','BAE fitted model','BAE estimation')
-legend boxoff
-set(gca,'fontsize',16)
-box off
-axis square
-if strcmp(units,'bit/spike')
-savefig(fullfile(figures_directory,'BAE method - SI bit per spike.fig'))
-saveas(gcf,fullfile(figures_directory,'BAE method - SI bit per spike'),'png')
-elseif strcmp(units,'bit/sec')
-    savefig(fullfile(figures_directory,'BAE method - SI bit per sec.fig'))
-    saveas(gcf,fullfile(figures_directory,'BAE method - SI bit per sec'),'png')
-else
-    savefig(fullfile(figures_directory,'BAE method - MI.fig'))
-    saveas(gcf,fullfile(figures_directory,'BAE method - MI'),'png')
-end
-
-% checking if mean fit accuracy is sufficiently high:
-if BAE_fit_R_2_mean<mean_BAE_fit_R_2_threshold
-    warndlg(['The fit of the BAE method is not very accurate (mean R^2<' num2str(mean_BAE_fit_R_2_threshold) '). Try choosing a larger minimal subsample size.'])
-end
-
-% plotting the cell-level results for the extrapolation method:
-figure
-plot(information_versus_sample_size(:,end),BAE_information,'.','markersize',15,'color','g')
-hold on
-plot(information_versus_sample_size(BAE_fit_R_2<BAE_fit_R_2_threshold,end),BAE_information(BAE_fit_R_2<BAE_fit_R_2_threshold),'.','markersize',15,'color',[0.5 0.5 0.5])
-plot([0 1.1*max(information_versus_sample_size(:,end))],[0 1.1*max(information_versus_sample_size(:,end))],'--k','linewidth',2)
-xlim([0 1.1*max(information_versus_sample_size(:,end))])
-ylim([0 1.1*max(information_versus_sample_size(:,end))])
-axis square
-if strcmp(units,'bit/spike') || strcmp(units,'bit/sec')
-    xlabel(['Naive SI (' units ')'])
-else
-    xlabel(['Naive MI (' units ')'])
-end
-ylabel(['BAE estimation (' units ')'])
-set(gca,'fontsize',16)
-box off
-if sum(BAE_fit_R_2<BAE_fit_R_2_threshold)>0
-    legend('Accurate fit','Inaccurate fit','Location','northwest')
+if plot_results
+    figure
+    plot(subsample_size/subsample_size(end),mean_information_versus_sample_size,'ob','linewidth',2)
+    hold on
+    plot(subsample_size/subsample_size(end),AE_fitted_model,'-','color',[1 0.5 0],'linewidth',2)
+    plot([0 1],[AE_fit_params(1) AE_fit_params(1)],'--','color',[1 0.5 0],'linewidth',2)
+    plot(subsample_size/subsample_size(end),BAE_fitted_model,'-g','linewidth',2)
+    plot([0 1],[mean_BAE_fit_params(1) mean_BAE_fit_params(1)],'--g','linewidth',2)
+    plot(subsample_size/subsample_size(end),mean_information_versus_sample_size,'ob','linewidth',2)
+    xlim([0 1])
+    ylim([0 ceil(mean_information_versus_sample_size(1))])
+    if strcmp(units,'bit')
+        ylim([0 1.1*mean_information_versus_sample_size(1)])
+    end
+    xlabel('Subsample fraction')
+    if strcmp(units,'bit/spike') || strcmp(units,'bit/sec')
+        ylabel(['SI (' units ')'])
+    else
+        ylabel(['MI (' units ')'])
+    end
+    legend('Naive','AE fitted model','AE estimation','BAE fitted model','BAE estimation')
     legend boxoff
-end
-if strcmp(units,'bit/spike')
-    savefig(fullfile(figures_directory,'BAE versus naive information - SI bit per spike.fig'))
-    saveas(gcf,fullfile(figures_directory,'BAE versus naive information - SI bit per spike'),'png')
-elseif strcmp(units,'bit/sec')
-    savefig(fullfile(figures_directory,'BAE versus naive information - SI bit per sec.fig'))
-    saveas(gcf,fullfile(figures_directory,'BAE versus naive information - SI bit per sec'),'png')
-else
-    savefig(fullfile(figures_directory,'BAE versus naive information - MI.fig'))
-    saveas(gcf,fullfile(figures_directory,'BAE versus naive information - MI'),'png')
-end
-
-% finding cells with inaccurate fit:
-if sum(BAE_fit_R_2<BAE_fit_R_2_threshold)>0
-    warndlg(['The fit of the BAE method is less accurate in ' num2str(sum(BAE_fit_R_2<BAE_fit_R_2_threshold)) '/' num2str(N) ' cells (R^2<' num2str(BAE_fit_R_2_threshold) '). Consider discarding these cells from the analysis.'])
+    set(gca,'fontsize',16)
+    box off
+    axis square
+    if strcmp(units,'bit/spike')
+        savefig(fullfile(figures_directory,'BAE method - SI bit per spike.fig'))
+        saveas(gcf,fullfile(figures_directory,'BAE method - SI bit per spike'),'png')
+    elseif strcmp(units,'bit/sec')
+        savefig(fullfile(figures_directory,'BAE method - SI bit per sec.fig'))
+        saveas(gcf,fullfile(figures_directory,'BAE method - SI bit per sec'),'png')
+    else
+        savefig(fullfile(figures_directory,'BAE method - MI.fig'))
+        saveas(gcf,fullfile(figures_directory,'BAE method - MI'),'png')
+    end
+    
+    % plotting the cell-level results for the extrapolation method:
+    figure
+    plot(information_versus_sample_size(:,end),BAE_information,'.','markersize',15,'color','g')
+    hold on
+    plot([0 1.1*max(information_versus_sample_size(:,end))],[0 1.1*max(information_versus_sample_size(:,end))],'--k','linewidth',2)
+    xlim([0 1.1*max(information_versus_sample_size(:,end))])
+    ylim([0 1.1*max(information_versus_sample_size(:,end))])
+    axis square
+    if strcmp(units,'bit/spike') || strcmp(units,'bit/sec')
+        xlabel(['Naive SI (' units ')'])
+    else
+        xlabel(['Naive MI (' units ')'])
+    end
+    ylabel(['BAE estimation (' units ')'])
+    set(gca,'fontsize',16)
+    box off
+    if strcmp(units,'bit/spike')
+        savefig(fullfile(figures_directory,'BAE versus naive information - SI bit per spike.fig'))
+        saveas(gcf,fullfile(figures_directory,'BAE versus naive information - SI bit per spike'),'png')
+    elseif strcmp(units,'bit/sec')
+        savefig(fullfile(figures_directory,'BAE versus naive information - SI bit per sec.fig'))
+        saveas(gcf,fullfile(figures_directory,'BAE versus naive information - SI bit per sec'),'png')
+    else
+        savefig(fullfile(figures_directory,'BAE versus naive information - MI.fig'))
+        saveas(gcf,fullfile(figures_directory,'BAE versus naive information - MI'),'png')
+    end
 end
