@@ -21,8 +21,7 @@ To perform the analysis on the real or simulated sample data, call the *estimate
 The settings for calling this function are defined in the *call_function_estimate_unbiased_information.m* script.
 
 An alternative option it to use the *demo_real_data.m* or *demo_simulated_data.m* scripts.  
-
-Before running the script, change the *data_pathway* to the *sample data* directory on your computer.
+Before running this script, change the *data_pathway* to the *sample data* directory on your computer.
 
 ## Inputs
 1. spike_train - a matrix of size TxN, where T is the number of time bins and N is the number of neurons. Each element is the spike count of a given neuron in a given time bin.
