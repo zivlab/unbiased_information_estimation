@@ -1,4 +1,4 @@
-function [BAE_information,mean_BAE_information,BAE_fit_R_2,BAE_fit_R_2_mean]=perform_BAE(information_versus_sample_size,subsample_size,units,figures_directory,plot_results)
+function [BAE_information,mean_BAE_information,BAE_fit_R_2,BAE_fit_R_2_mean]=perform_BAE(information_versus_sample_size,subsample_size,units,plot_results,save_figures,figures_directory)
 % This functions corrects the upward bias in the naive calculation of
 % information content for limited sample sizes using the bounded asymptotic extrapolation (BAE) method.
 % BAE is based on fitting the function of how the information changes with sample size and extrapolating it to infinity.
@@ -9,9 +9,11 @@ function [BAE_information,mean_BAE_information,BAE_fit_R_2,BAE_fit_R_2_mean]=per
 % information of each of N neurons as a function of T different sample
 % sizes.
 % 2. subsample_size - Vector of T different sample sizes
-% 3. units - Either bit/spike, bit/sec, or bit
-% 5. figures_directory - Path to save the results figure
-% 6. plot_results - 1 for plotting and 0 for not
+% 3. units - Either bit/spike, bit/sec, or bit% 5. plot_results - 1 for plotting and 0 for not
+% 4. plot_results - 1 for plotting and 0 for not
+% 5. save_figures - 1 for saving the figures and 0 for not
+% 6. figures_directory - Path for saving the figures
+
 
 % Outputs:
 % 1. BAE_information - Vector of size N with the estimated
@@ -78,8 +80,12 @@ for n=1:N
 end
 
 % plotting the mean average results for the extrapolation method:
-if plot_results
-    figure
+if plot_results || save_figures
+    if plot_results
+        figure
+    else
+        figure('Visible','off')
+    end
     plot(subsample_size/subsample_size(end),mean_information_versus_sample_size,'ob','linewidth',2)
     hold on
     plot(subsample_size/subsample_size(end),AE_fitted_model,'-','color',[1 0.5 0],'linewidth',2)
@@ -103,19 +109,25 @@ if plot_results
     set(gca,'fontsize',16)
     box off
     axis square
-    if strcmp(units,'bit/spike')
-        savefig(fullfile(figures_directory,'BAE method - SI bit per spike.fig'))
-        saveas(gcf,fullfile(figures_directory,'BAE method - SI bit per spike'),'png')
-    elseif strcmp(units,'bit/sec')
-        savefig(fullfile(figures_directory,'BAE method - SI bit per sec.fig'))
-        saveas(gcf,fullfile(figures_directory,'BAE method - SI bit per sec'),'png')
-    else
-        savefig(fullfile(figures_directory,'BAE method - MI.fig'))
-        saveas(gcf,fullfile(figures_directory,'BAE method - MI'),'png')
+    if save_figures
+        if strcmp(units,'bit/spike')
+            savefig(fullfile(figures_directory,'BAE method - SI bit per spike.fig'))
+            saveas(gcf,fullfile(figures_directory,'BAE method - SI bit per spike'),'png')
+        elseif strcmp(units,'bit/sec')
+            savefig(fullfile(figures_directory,'BAE method - SI bit per sec.fig'))
+            saveas(gcf,fullfile(figures_directory,'BAE method - SI bit per sec'),'png')
+        else
+            savefig(fullfile(figures_directory,'BAE method - MI.fig'))
+            saveas(gcf,fullfile(figures_directory,'BAE method - MI'),'png')
+        end
     end
     
     % plotting the cell-level results for the extrapolation method:
-    figure
+    if plot_results
+        figure
+    else
+        figure('Visible','off')
+    end
     plot(information_versus_sample_size(:,end),BAE_information,'.','markersize',15,'color','g')
     hold on
     plot([0 1.1*max(information_versus_sample_size(:,end))],[0 1.1*max(information_versus_sample_size(:,end))],'--k','linewidth',2)
@@ -130,14 +142,16 @@ if plot_results
     ylabel(['BAE estimation (' units ')'])
     set(gca,'fontsize',16)
     box off
-    if strcmp(units,'bit/spike')
-        savefig(fullfile(figures_directory,'BAE versus naive information - SI bit per spike.fig'))
-        saveas(gcf,fullfile(figures_directory,'BAE versus naive information - SI bit per spike'),'png')
-    elseif strcmp(units,'bit/sec')
-        savefig(fullfile(figures_directory,'BAE versus naive information - SI bit per sec.fig'))
-        saveas(gcf,fullfile(figures_directory,'BAE versus naive information - SI bit per sec'),'png')
-    else
-        savefig(fullfile(figures_directory,'BAE versus naive information - MI.fig'))
-        saveas(gcf,fullfile(figures_directory,'BAE versus naive information - MI'),'png')
+    if save_figures
+        if strcmp(units,'bit/spike')
+            savefig(fullfile(figures_directory,'BAE versus naive information - SI bit per spike.fig'))
+            saveas(gcf,fullfile(figures_directory,'BAE versus naive information - SI bit per spike'),'png')
+        elseif strcmp(units,'bit/sec')
+            savefig(fullfile(figures_directory,'BAE versus naive information - SI bit per sec.fig'))
+            saveas(gcf,fullfile(figures_directory,'BAE versus naive information - SI bit per sec'),'png')
+        else
+            savefig(fullfile(figures_directory,'BAE versus naive information - MI.fig'))
+            saveas(gcf,fullfile(figures_directory,'BAE versus naive information - MI'),'png')
+        end
     end
 end

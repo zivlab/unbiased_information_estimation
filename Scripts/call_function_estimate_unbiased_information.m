@@ -26,8 +26,8 @@
 
 % Outputs:
 %----------
-% General parameters (dt, number of shuffles, subsampling repetitions, etc.) and
-% data statistics (average rates, average active time bins, fraction of significant cells, etc.)
+% General settings (dt, number of shuffles, subsampling repetitions, etc.) and
+% Firing statistics (average rates, average active time bins, fraction of significant cells, etc.)
 % Estimated information (SI and MI based on the SSR and BAE methods)
 
 clc
@@ -48,7 +48,7 @@ settings.dt=1/20; % time bin in units of seconds
 
 % Focusing only on sufficiently active cells:
 settings.active_bins_threshold=10; % minimal number of time bins in which the cell is defined active - less than 10 active time bins leads to an inaccurate estimation
-settings.firing_rate_threshold=0; % in spike/sec.  Default value is 0, but you can choose to add an average firng rate threshold
+settings.firing_rate_threshold=0; % in spike/sec.  Default value is 0, but you can choose to add an average firing rate threshold
 
 % Settings for the tuning signficance test:
 settings.estimate_only_significant_cells=1; % 1 if estimation is performed only for significanty tuned cells (0 otherwise)
@@ -61,7 +61,8 @@ settings.subsampling_repetitions=100; % number of repetitions in the subsampling
 settings.subsample_fraction=(0.1:0.1:1); % subsamples with size of different fractions of the data
 
 settings.plot_results=0; % 1 for plotting the results (0 otherwise)
-settings.figures_directory=[]; % if plotting results then set the path for saving the figures
+settings.save_figures=0; % 1 for saving the figures (0 otherwise)
+settings.figures_directory='D:\dev\Bias correction\sample data results'; % if plotting results then set the path for saving the figures
 
 %% loading the data and calling the unbiased_information_estimation function: 
 

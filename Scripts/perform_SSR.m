@@ -1,4 +1,4 @@
-function [SSR_information,mean_SSR_information,SSR_stability,mean_SSR_stability]=perform_SSR(information_versus_sample_size,shuffle_information_versus_sample_size,subsample_size,units,figures_directory,plot_results)
+function [SSR_information,mean_SSR_information,SSR_stability,mean_SSR_stability]=perform_SSR(information_versus_sample_size,shuffle_information_versus_sample_size,subsample_size,units,plot_results,save_figures,figures_directory)
 % This functions corrects the upward bias in the naive calculation of
 % information for limited sample sizes using the scaled shuffle reduction (SSR) method. 
 % SSR is based on assuming a fixed bias ratio between the naive and shuffle information 
@@ -12,8 +12,9 @@ function [SSR_information,mean_SSR_information,SSR_stability,mean_SSR_stability]
 % bounds and 3 when using only the data
 % 3. subsample_size - Vector of T different sample sizes
 % 4. units - Either bit/spike, bit/sec, or bit
-% 5. figures_directory - Path to save the results figure
-% 6. plot_results - 1 for plotting and 0 for not
+% 5. plot_results - 1 for plotting and 0 for not
+% 6. save_figures - 1 for saving the figures and 0 for not
+% 7. figures_directory - Path for saving the figures
 
 % Outputs:
 % 1. SSR_information - Vector of size N with the estimated
@@ -35,8 +36,12 @@ SSR_stability=1-std(SSR_information_versus_sample_size,0,2,'omitnan')./SSR_infor
 mean_SSR_stability=1-std(mean_SSR_information_versus_sample_size,'omitnan')./mean_SSR_information.*subsample_size(2)./subsample_size(end);
 
 % plotting the mean average results for the SSR method:
-if plot_results
-    figure;
+if plot_results || save_figures
+    if plot_results
+        figure
+    else
+        figure('Visible','off')
+    end
     plot((1:length(mean_information_versus_sample_size))./length(mean_information_versus_sample_size),mean_information_versus_sample_size,'color','b','linewidth',2)
     hold on
     plot((1:length(mean_information_versus_sample_size))./length(mean_information_versus_sample_size),mean_shuffle_information_versus_sample_size,'color','k','linewidth',2)
@@ -58,19 +63,24 @@ if plot_results
     set(gca,'fontsize',16)
     box off
     axis square
-    if strcmp(units,'bit/spike')
-        savefig(fullfile(figures_directory,'SSR method - SI bit per spike.fig'))
-        saveas(gcf,fullfile(figures_directory,'SSR method - SI bit per spike'),'png')
-    elseif strcmp(units,'bit/sec')
-        savefig(fullfile(figures_directory,'SSR method - SI bit per sec.fig'))
-        saveas(gcf,fullfile(figures_directory,'SSR method - SI bit per sec'),'png')
-    else
-        savefig(fullfile(figures_directory,'SSR method - MI.fig'))
-        saveas(gcf,fullfile(figures_directory,'SSR method - MI'),'png')
+    if save_figures
+        if strcmp(units,'bit/spike')
+            savefig(fullfile(figures_directory,'SSR method - SI bit per spike.fig'))
+            saveas(gcf,fullfile(figures_directory,'SSR method - SI bit per spike'),'png')
+        elseif strcmp(units,'bit/sec')
+            savefig(fullfile(figures_directory,'SSR method - SI bit per sec.fig'))
+            saveas(gcf,fullfile(figures_directory,'SSR method - SI bit per sec'),'png')
+        else
+            savefig(fullfile(figures_directory,'SSR method - MI.fig'))
+            saveas(gcf,fullfile(figures_directory,'SSR method - MI'),'png')
+        end
     end
-    
     % plotting the individual cells results for the SSR method:
-    figure
+    if plot_results
+        figure
+    else
+        figure('Visible','off')
+    end
     plot(information_versus_sample_size(:,end),SSR_information,'.','markersize',15,'color','m')
     hold on
     plot([0 1.1*max(information_versus_sample_size(:,end))],[0 1.1*max(information_versus_sample_size(:,end))],'--k','linewidth',2)
@@ -85,14 +95,16 @@ if plot_results
     ylabel(['SSR estimation (' units ')'])
     set(gca,'fontsize',16)
     box off
-    if strcmp(units,'bit/spike')
-        savefig(fullfile(figures_directory,'SSR versus naive information - SI bit per spike.fig'))
-        saveas(gcf,fullfile(figures_directory,'SSR versus naive information - SI bit per spike'),'png')
-    elseif strcmp(units,'bit/sec')
-        savefig(fullfile(figures_directory,'SSR versus naive information - SI bit per sec.fig'))
-        saveas(gcf,fullfile(figures_directory,'SSR versus naive information - SI bit per sec'),'png')
-    else
-        savefig(fullfile(figures_directory,'SSR versus naive information - MI.fig'))
-        saveas(gcf,fullfile(figures_directory,'SSR versus naive information - MI'),'png')
+    if save_figures
+        if strcmp(units,'bit/spike')
+            savefig(fullfile(figures_directory,'SSR versus naive information - SI bit per spike.fig'))
+            saveas(gcf,fullfile(figures_directory,'SSR versus naive information - SI bit per spike'),'png')
+        elseif strcmp(units,'bit/sec')
+            savefig(fullfile(figures_directory,'SSR versus naive information - SI bit per sec.fig'))
+            saveas(gcf,fullfile(figures_directory,'SSR versus naive information - SI bit per sec'),'png')
+        else
+            savefig(fullfile(figures_directory,'SSR versus naive information - MI.fig'))
+            saveas(gcf,fullfile(figures_directory,'SSR versus naive information - MI'),'png')
+        end
     end
 end
