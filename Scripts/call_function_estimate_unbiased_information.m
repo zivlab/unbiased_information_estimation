@@ -62,7 +62,7 @@ settings.subsample_fraction=(0.1:0.1:1); % subsamples with size of different fra
 
 settings.plot_results=0; % 1 for plotting the results (0 otherwise)
 settings.save_figures=0; % 1 for saving the figures (0 otherwise)
-settings.figures_directory='[]'; % if plotting results then set the path for saving the figures
+settings.figures_directory=[]; % if plotting results then set the path for saving the figures
 
 %% loading the data and calling the unbiased_information_estimation function: 
 
