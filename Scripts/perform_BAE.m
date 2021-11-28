@@ -1,4 +1,4 @@
-function [BAE_information,mean_BAE_information,BAE_fit_R_2,BAE_fit_R_2_mean]=perform_BAE(information_versus_sample_size,subsample_size,units,plot_results,save_figures,figures_directory)
+function [BAE_information,average_BAE_information,BAE_fit_R_2,average_BAE_fit_R_2]=perform_BAE(information_versus_sample_size,subsample_size,units,plot_results,save_figures,figures_directory)
 % This functions corrects the upward bias in the naive calculation of
 % information content for limited sample sizes using the bounded asymptotic extrapolation (BAE) method.
 % BAE is based on fitting the function of how the information changes with sample size and extrapolating it to infinity.
@@ -18,16 +18,26 @@ function [BAE_information,mean_BAE_information,BAE_fit_R_2,BAE_fit_R_2_mean]=per
 % Outputs:
 % 1. BAE_information - Vector of size N with the estimated
 % information for each neuron.
-% 2. mean_BAE_information - Single value with the estimated
-% average information for the mean.
+% 2. average_BAE_information - Single value with the estimated
+% average information for the population.
+% 3. BAE_fit_R_2 - Vector of size N with the squared residuals of the
+% fitted curve for each neuron
+% 4. average_BAE_fit_R_2 - Single value with the average squared residuals for the population.
 
-% extrapolating the information for the mean average with information(t)=a+b/(1+ct) - BAE:
-mean_information_versus_sample_size=mean(information_versus_sample_size,'omitnan');
-a_0=mean(information_versus_sample_size(:,end),'omitnan');
-b_0=mean(information_versus_sample_size(:,1),'omitnan')-mean(information_versus_sample_size(:,end),'omitnan');
+% extrapolating the information for the average average with information(t)=a+b/(1+ct) - BAE:
 middle_index=round(length(subsample_size)/2);
 middle_sample_size=subsample_size(middle_index);
-c_0=1./middle_sample_size*(mean(information_versus_sample_size(:,1),'omitnan')-mean(information_versus_sample_size(:,middle_index),'omitnan'))/(mean(information_versus_sample_size(:,middle_index),'omitnan')-mean(information_versus_sample_size(:,end),'omitnan'));
+if size(information_versus_sample_size,1)>1
+    average_information_versus_sample_size=mean(information_versus_sample_size,'omitnan');
+    a_0=mean(information_versus_sample_size(:,end),'omitnan');
+    b_0=mean(information_versus_sample_size(:,1),'omitnan')-mean(information_versus_sample_size(:,end),'omitnan');
+    c_0=1./middle_sample_size*(mean(information_versus_sample_size(:,1),'omitnan')-mean(information_versus_sample_size(:,middle_index),'omitnan'))/(mean(information_versus_sample_size(:,middle_index),'omitnan')-mean(information_versus_sample_size(:,end),'omitnan'));
+else
+    average_information_versus_sample_size=information_versus_sample_size;
+    a_0=information_versus_sample_size(1,end);
+    b_0=information_versus_sample_size(1,1)-information_versus_sample_size(1,end);
+    c_0=1./middle_sample_size*(information_versus_sample_size(1,1)-information_versus_sample_size(1,middle_index))/(information_versus_sample_size(1,middle_index)-information_versus_sample_size(1,end));
+end
 initial_parameters=[a_0 b_0 c_0];
 F_model = @(x,xdata)...
     x(1)+(x(2))./(1+x(3).*xdata);
@@ -36,15 +46,21 @@ ub = [Inf Inf Inf];
 options = statset('MaxIter',1000, 'MaxFunEvals',2000);
 
 % finding the parameters that best fit the data (BAE):
-mean_BAE_fit_params=lsqcurvefit(F_model,initial_parameters,subsample_size,mean_information_versus_sample_size,lb,ub,options);
-BAE_fitted_model=mean_BAE_fit_params(1)+(mean_BAE_fit_params(2))./(1+mean_BAE_fit_params(3).*subsample_size);
-mean_BAE_information=mean_BAE_fit_params(1);
-BAE_fit_R_2_mean=1-mean((BAE_fitted_model-mean_information_versus_sample_size).^2)./var(mean_information_versus_sample_size);
+average_BAE_fit_params=lsqcurvefit(F_model,initial_parameters,subsample_size,average_information_versus_sample_size,lb,ub,options);
+BAE_fitted_model=average_BAE_fit_params(1)+(average_BAE_fit_params(2))./(1+average_BAE_fit_params(3).*subsample_size);
+average_BAE_information=average_BAE_fit_params(1);
+average_BAE_fit_R_2=1-mean((BAE_fitted_model-average_information_versus_sample_size).^2)./var(average_information_versus_sample_size);
 
-% extrapolating the information for the mean average with information(t)=a+b/t+c/t^2 - AE:
-a_0=mean(information_versus_sample_size(:,end),'omitnan');
-b_0=mean(information_versus_sample_size(:,1),'omitnan')-mean(information_versus_sample_size(:,end),'omitnan');
-c_0=mean(information_versus_sample_size(:,1),'omitnan')-mean(information_versus_sample_size(:,end),'omitnan');
+% extrapolating the information for the average average with information(t)=a+b/t+c/t^2 - AE:
+if size(information_versus_sample_size,1)>1
+    a_0=mean(information_versus_sample_size(:,end),'omitnan');
+    b_0=mean(information_versus_sample_size(:,1),'omitnan')-mean(information_versus_sample_size(:,end),'omitnan');
+    c_0=mean(information_versus_sample_size(:,1),'omitnan')-mean(information_versus_sample_size(:,end),'omitnan');
+else
+    a_0=information_versus_sample_size(1,end);
+    b_0=information_versus_sample_size(1,1)-information_versus_sample_size(1,end);
+    c_0=information_versus_sample_size(1,1)-information_versus_sample_size(1,end);
+end
 initial_parameters=[a_0 b_0 c_0];
 F_model = @(x,xdata)...
     x(1)+x(2)./xdata+x(3)./xdata.^2;
@@ -53,50 +69,55 @@ ub = [Inf Inf inf];
 options = statset('MaxIter',1000, 'MaxFunEvals',2000);
 
 % finding the parameters that best fit the data (AE):
-AE_fit_params=lsqcurvefit(F_model,initial_parameters,subsample_size,mean_information_versus_sample_size,lb,ub,options);
+AE_fit_params=lsqcurvefit(F_model,initial_parameters,subsample_size,average_information_versus_sample_size,lb,ub,options);
 AE_fitted_model=AE_fit_params(1)+AE_fit_params(2)./subsample_size+AE_fit_params(3)./subsample_size.^2;
 
 % extrapolating the information for each cell:
-N=size(information_versus_sample_size,1);
-BAE_information=nan(N,1);
-BAE_fit_R_2=nan(N,1);
-for n=1:N
-    this_information_versus_sample_size=information_versus_sample_size(n,:);
-    a_0=this_information_versus_sample_size(end);
-    b_0=this_information_versus_sample_size(1)-this_information_versus_sample_size(end);
-    c_0=1./middle_sample_size*(this_information_versus_sample_size(1)-this_information_versus_sample_size(middle_index))/(this_information_versus_sample_size(middle_index)-this_information_versus_sample_size(end));
-    
-    initial_parameters=[a_0 b_0 c_0];
-    F_model = @(x,xdata)...
-        x(1)+x(2)./(1+x(3).*xdata);
-    lb = [0 0 0];
-    ub = [Inf Inf Inf];
-    options = statset('MaxIter',1000, 'MaxFunEvals',2000);
-    % finding the parameters that best fit the data:
-    this_BAE_fit_params=lsqcurvefit(F_model,initial_parameters,subsample_size,this_information_versus_sample_size,lb,ub,options);
-    BAE_information(n)=this_BAE_fit_params(1);
-    this_BAE_fitted_model=this_BAE_fit_params(1)+(this_BAE_fit_params(2))./(1+this_BAE_fit_params(3).*subsample_size);
-    BAE_fit_R_2(n)=1-mean((this_BAE_fitted_model-this_information_versus_sample_size).^2)./var(this_information_versus_sample_size);
+if size(information_versus_sample_size,1)>1
+    N=size(information_versus_sample_size,1);
+    BAE_information=nan(N,1);
+    BAE_fit_R_2=nan(N,1);
+    for n=1:N
+        this_information_versus_sample_size=information_versus_sample_size(n,:);
+        a_0=this_information_versus_sample_size(end);
+        b_0=this_information_versus_sample_size(1)-this_information_versus_sample_size(end);
+        c_0=1./middle_sample_size*(this_information_versus_sample_size(1)-this_information_versus_sample_size(middle_index))/(this_information_versus_sample_size(middle_index)-this_information_versus_sample_size(end));
+        
+        initial_parameters=[a_0 b_0 c_0];
+        F_model = @(x,xdata)...
+            x(1)+x(2)./(1+x(3).*xdata);
+        lb = [0 0 0];
+        ub = [Inf Inf Inf];
+        options = statset('MaxIter',1000, 'MaxFunEvals',2000);
+        % finding the parameters that best fit the data:
+        this_BAE_fit_params=lsqcurvefit(F_model,initial_parameters,subsample_size,this_information_versus_sample_size,lb,ub,options);
+        BAE_information(n)=this_BAE_fit_params(1);
+        this_BAE_fitted_model=this_BAE_fit_params(1)+(this_BAE_fit_params(2))./(1+this_BAE_fit_params(3).*subsample_size);
+        BAE_fit_R_2(n)=1-mean((this_BAE_fitted_model-this_information_versus_sample_size).^2)./var(this_information_versus_sample_size);
+    end
+else
+    BAE_information=average_BAE_information;
+    BAE_fit_R_2=average_BAE_fit_R_2;
 end
 
-% plotting the mean average results for the extrapolation method:
+% plotting the average average results for the extrapolation method:
 if plot_results || save_figures
     if plot_results
         figure
     else
         figure('Visible','off')
     end
-    plot(subsample_size/subsample_size(end),mean_information_versus_sample_size,'ob','linewidth',2)
+    plot(subsample_size/subsample_size(end),average_information_versus_sample_size,'ob','linewidth',2)
     hold on
     plot(subsample_size/subsample_size(end),AE_fitted_model,'-','color',[1 0.5 0],'linewidth',2)
     plot([0 1],[AE_fit_params(1) AE_fit_params(1)],'--','color',[1 0.5 0],'linewidth',2)
     plot(subsample_size/subsample_size(end),BAE_fitted_model,'-g','linewidth',2)
-    plot([0 1],[mean_BAE_fit_params(1) mean_BAE_fit_params(1)],'--g','linewidth',2)
-    plot(subsample_size/subsample_size(end),mean_information_versus_sample_size,'ob','linewidth',2)
+    plot([0 1],[average_BAE_fit_params(1) average_BAE_fit_params(1)],'--g','linewidth',2)
+    plot(subsample_size/subsample_size(end),average_information_versus_sample_size,'ob','linewidth',2)
     xlim([0 1])
-    ylim([0 ceil(mean_information_versus_sample_size(1))])
+    ylim([0 ceil(average_information_versus_sample_size(1))])
     if strcmp(units,'bit')
-        ylim([0 1.1*mean_information_versus_sample_size(1)])
+        ylim([0 1.1*average_information_versus_sample_size(1)])
     end
     xlabel('Subsample fraction')
     if strcmp(units,'bit/spike') || strcmp(units,'bit/sec')

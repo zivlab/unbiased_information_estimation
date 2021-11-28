@@ -24,10 +24,13 @@
 % 2. stimulus_trace - a vector of size T, where each element is the stimulus value in a
 % given time bin.
 
+% *When applied to quantify the spatial tuning of place cells, the common practice is to first filter out 
+% time bins durning which the animal is not running (i.e., analyze only bins with speed > threshold) 
+
 % Outputs:
 %----------
 % General settings (dt, number of shuffles, subsampling repetitions, etc.) and
-% Firing statistics (average rates, average active time bins, fraction of significant cells, etc.)
+% Firing statistics (average rates, average active time bins, fraction of significantly tuned cells, etc.)
 % Estimated information (SI and MI based on the SSR and BAE methods)
 
 clc
@@ -39,7 +42,7 @@ settings=struct;
 % Choosing which information theoretic measures to estimate:
 estimate_SI_bit_spike=1; % Choose to estimate SI (bit/spike) by setting the value to 1 (0 otherwise)
 estimate_SI_bit_sec=1; % Choose to estimate SI (bit/sec) by setting the value to 1 (0 otherwise)
-estimate_MI=1; % Choose to estimate MI by setting the value to 1 (0 otherwise)
+estimate_MI=0; % Choose to estimate MI by setting the value to 1 (0 otherwise)
 measures_to_estimate=[estimate_SI_bit_spike,estimate_SI_bit_sec,estimate_MI];
 settings.measures_to_estimate=measures_to_estimate; 
 
@@ -51,16 +54,16 @@ settings.active_bins_threshold=10; % minimal number of time bins in which the ce
 settings.firing_rate_threshold=0; % in spike/sec.  Default value is 0, but you can choose to add an average firing rate threshold
 
 % Settings for the tuning signficance test:
-settings.estimate_only_significant_cells=1; % 1 if estimation is performed only for significanty tuned cells (0 otherwise)
+settings.estimate_only_significantly_tuned_cells=1; % 1 if estimation is performed only for significanty tuned cells (0 otherwise)
 settings.shuffle_type='cyclic'; % permutations used for the significance test can be either 'cyclic' or 'random'
 settings.num_shuffles=1000;
-settings.significance_threshold=0.05;
+settings.tuning_significance_threshold=0.05;
 
 % Setting for the subsampling procedure:
-settings.subsampling_repetitions=100; % number of repetitions in the subsampling of the data
+settings.subsampling_repetitions=500; % number of repetitions in the subsampling of the data
 settings.subsample_fraction=(0.1:0.1:1); % subsamples with size of different fractions of the data
 
-settings.plot_results=0; % 1 for plotting the results (0 otherwise)
+settings.plot_results=1; % 1 for plotting the results (0 otherwise)
 settings.save_figures=0; % 1 for saving the figures (0 otherwise)
 settings.figures_directory=[]; % if plotting results then set the path for saving the figures
 

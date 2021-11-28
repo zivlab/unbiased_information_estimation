@@ -89,7 +89,11 @@ else % binning the responses using non-integer values:
 end
 
 % computing the MI:
+if num_cells>1
 conditional_entropy=-sum(p_s.*squeeze(sum(p_r_given_s.*log2(p_r_given_s+epsilon),2)),2);
+else
+    conditional_entropy=-sum(p_s.*squeeze(sum(squeeze(p_r_given_s).*log2(squeeze(p_r_given_s)+epsilon),1)),2);
+end
 MI=response_entropy-conditional_entropy;
 MI(isnan(MI))=0;
 

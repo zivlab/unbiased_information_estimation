@@ -24,10 +24,13 @@
 % 2. stimulus_trace - a vector of size T, where each element is the stimulus value in a
 % given time bin.
 
+% *When applied to quantify the spatial tuning of place cells, the common practice is to first filter out
+% time bins durning which the animal is not running (i.e., analyze only bins with speed > threshold)
+
 % Outputs:
 %----------
 % General settings (dt, number of shuffles, subsampling repetitions, etc.) and
-% Firing statistics (average rates, average active time bins, fraction of significant cells, etc.)
+% Firing statistics (average rates, average active time bins, fraction of significantly tuned cells, etc.)
 % Estimated information (SI and MI based on the SSR and BAE methods)
 
 clc
@@ -57,100 +60,112 @@ figures_directory='D:\dev\Bias correction\sample data results';
 
 % Setting the parameters and which cells to analyze:
 dt=1/20; % time bin in units of seconds
-shuffle_type='cyclic'; % permutations used for the significance test can be either 'cyclic' or 'random'
+shuffle_type='cyclic'; % permutations used for the tuning significance test can be either 'cyclic' or 'random'
 active_bins_threshold=10; % minimal number of time bins in which the cell is defined active - less than 10 active time bins leads to an inaccurate estimation
 firing_rate_threshold=0; % in spike/sec.  Default value is 0, but you can choose to add an average firing rate threshold
 num_shuffles=1000;
-significance_threshold=0.05; % for determining which cells are significantly tuned to the encoded variable
+tuning_significance_threshold=0.05; % for determining which cells are significantly tuned to the encoded variable
 
 % Computing the tuning curves for shuffled spike trains:
 [tuning_curves,normalized_states_distribution]=compute_tuning_curves(spike_train,stimulus_trace,dt);
 active_bins=sum(spike_train>0);
 average_firing_rates=mean(spike_train)/dt;
 sufficiently_active_cells_indexes=find(active_bins>=active_bins_threshold & average_firing_rates>firing_rate_threshold);
-fraction_sufficiently_active_cells=length(sufficiently_active_cells_indexes)/length(active_bins);
-shuffled_spike_trains=shuffle_spike_trains(spike_train(:,sufficiently_active_cells_indexes),num_shuffles,shuffle_type);
-
-% Indetifying significantly modulated cells:
-if measures_to_estimate(1) || measures_to_estimate(2) % based on the SI in active cells for naive versus shuffle
-    % naive SI:
-    [SI_naive_bit_spike,SI_naive_bit_sec]=compute_SI(average_firing_rates(sufficiently_active_cells_indexes),tuning_curves(sufficiently_active_cells_indexes,:),normalized_states_distribution);
+if ~isempty(sufficiently_active_cells_indexes)
+    fraction_sufficiently_active_cells=length(sufficiently_active_cells_indexes)/length(active_bins);
+    shuffled_spike_trains=shuffle_spike_trains(spike_train(:,sufficiently_active_cells_indexes),num_shuffles,shuffle_type);
     
-    % shuffle SI:
-    SI_shuffle_bit_spike=nan(length(sufficiently_active_cells_indexes),num_shuffles);
-    display_progress_bar('Computing shuffle information for the significance test: ',false)
-    for n=1:num_shuffles
-        display_progress_bar(100*(n/num_shuffles),false)
-        [temp_shuffled_tuning_curves,~]=compute_tuning_curves(shuffled_spike_trains(:,:,n),stimulus_trace,dt);
-        [SI_shuffle_bit_spike(:,n),~]=compute_SI(average_firing_rates(sufficiently_active_cells_indexes),temp_shuffled_tuning_curves,normalized_states_distribution);
+    % Indetifying significantly modulated cells:
+    display_progress_bar('Terminating previous progress bars',true)
+    if measures_to_estimate(1) || measures_to_estimate(2) % based on the SI in active cells for naive versus shuffle
+        % naive SI:
+        [SI_naive_bit_spike,SI_naive_bit_sec]=compute_SI(average_firing_rates(sufficiently_active_cells_indexes),tuning_curves(sufficiently_active_cells_indexes,:),normalized_states_distribution);
+        
+        % shuffle SI:
+        SI_shuffle_bit_spike=nan(length(sufficiently_active_cells_indexes),num_shuffles);
+        display_progress_bar('Computing shuffle information for the tuning significance test: ',false)
+        for n=1:num_shuffles
+            display_progress_bar(100*(n/num_shuffles),false)
+            [temp_shuffled_tuning_curves,~]=compute_tuning_curves(shuffled_spike_trains(:,:,n),stimulus_trace,dt);
+            [SI_shuffle_bit_spike(:,n),~]=compute_SI(average_firing_rates(sufficiently_active_cells_indexes),temp_shuffled_tuning_curves,normalized_states_distribution);
+        end
+        display_progress_bar(' done',false)
+        display_progress_bar('',true)
+        
+        % Finding significantly tuned cells:
+        tuning_significance_active_cells=1-sum(repmat(SI_naive_bit_spike,1,num_shuffles)>SI_shuffle_bit_spike,2)/num_shuffles;
+        p_value_significantly_tuned_and_active_cells=tuning_significance_active_cells(tuning_significance_active_cells<tuning_significance_threshold)';
+        significantly_tuned_and_active_cells_indexes=sufficiently_active_cells_indexes(tuning_significance_active_cells<tuning_significance_threshold);
+        SI_naive_bit_spike_significantly_tuned_cells=SI_naive_bit_spike(tuning_significance_active_cells<tuning_significance_threshold);
+        SI_naive_bit_sec_significantly_tuned_cells=SI_naive_bit_sec(tuning_significance_active_cells<tuning_significance_threshold);
+        if ~isempty(significantly_tuned_and_active_cells_indexes)
+            average_SI_naive_bit_spike_significantly_tuned_cells=mean(SI_naive_bit_spike_significantly_tuned_cells,'omitnan');
+            average_SI_naive_bit_sec_significantly_tuned_cells=mean(SI_naive_bit_sec_significantly_tuned_cells,'omitnan');
+        end
+        
+    elseif measures_to_estimate(3) % based on the MI in active cells for naive versus shuffle
+        % naive MI:
+        MI_naive=compute_MI(spike_train(:,sufficiently_active_cells_indexes),stimulus_trace);
+        
+        % shuffle MI:
+        MI_shuffle=nan(length(sufficiently_active_cells_indexes),num_shuffles);
+        display_progress_bar('Computing shuffle information: ',false)
+        for n=1:num_shuffles
+            display_progress_bar(100*(n/num_shuffles),false)
+            MI_shuffle(:,n)=compute_MI(squeeze(shuffled_spike_trains(:,:,n)),stimulus_trace);
+        end
+        display_progress_bar(' done',false)
+        display_progress_bar('',true)
+        
+        % Finding significantly tuned cells:
+        tuning_significance_active_cells=1-sum(repmat(MI_naive,1,num_shuffles)>MI_shuffle,2)/num_shuffles;
+        p_value_significantly_tuned_and_active_cells=tuning_significance_active_cells(tuning_significance_active_cells<tuning_significance_threshold)';
+        MI_naive_significantly_tuned_cells=MI_naive(tuning_significance_active_cells<tuning_significance_threshold);
+        average_MI_naive_significantly_tuned_cells=mean(MI_naive_significantly_tuned_cells,'omitnan');
+        significantly_tuned_and_active_cells_indexes=sufficiently_active_cells_indexes(tuning_significance_active_cells<tuning_significance_threshold);
     end
-    display_progress_bar(' done',false)
-    display_progress_bar('',true)
     
-    % Finding significant cells:
-    information_significance_active_cells=1-sum(repmat(SI_naive_bit_spike,1,num_shuffles)>SI_shuffle_bit_spike,2)/num_shuffles;
-    p_value_significant_active_cells=information_significance_active_cells(information_significance_active_cells<significance_threshold)';
-    significant_active_cells_indexes=sufficiently_active_cells_indexes(information_significance_active_cells<significance_threshold);
-    SI_naive_bit_spike_significant_cells=SI_naive_bit_spike(information_significance_active_cells<significance_threshold);
-    SI_naive_bit_sec_significant_cells=SI_naive_bit_sec(information_significance_active_cells<significance_threshold);
-    average_SI_naive_bit_spike_significant_cells=mean(SI_naive_bit_spike_significant_cells,'omitnan');
-    average_SI_naive_bit_sec_significant_cells=mean(SI_naive_bit_sec_significant_cells,'omitnan');
-    
-elseif measures_to_estimate(3) % based on the MI in active cells for naive versus shuffle
-    % naive MI:
-    MI_naive=compute_MI(spike_train(:,sufficiently_active_cells_indexes),stimulus_trace);
-    
-    % shuffle MI:
-    MI_shuffle=nan(length(sufficiently_active_cells_indexes),num_shuffles);
-    display_progress_bar('Computing shuffle information: ',false)
-    for n=1:num_shuffles
-        display_progress_bar(100*(n/num_shuffles),false)
-        MI_shuffle(:,n)=compute_MI(squeeze(shuffled_spike_trains(:,:,n)),stimulus_trace);
+    % Focusing only on significantly tuned cells:
+    if ~isempty(significantly_tuned_and_active_cells_indexes)
+        average_rates_significantly_tuned_cells=average_firing_rates(significantly_tuned_and_active_cells_indexes);
+        active_bins_significantly_tuned_cells=active_bins(significantly_tuned_and_active_cells_indexes);
+        fraction_significantly_tuned_and_active_cells=length(significantly_tuned_and_active_cells_indexes)/length(active_bins);
+        fraction_of_significantly_tuned_from_active_cells=length(significantly_tuned_and_active_cells_indexes)/length(sufficiently_active_cells_indexes);
+        disp(['Found ' num2str(length(sufficiently_active_cells_indexes)) '/' num2str(length(active_bins)) ' sufficiently active cells, out of which ' num2str(length(significantly_tuned_and_active_cells_indexes)) ' cells (' num2str(round(100*length(significantly_tuned_and_active_cells_indexes)/length(sufficiently_active_cells_indexes))) '%) are significantly modulated by the encoded variable.'])
+        spike_train_significantly_tuned_cells=spike_train(:,significantly_tuned_and_active_cells_indexes);
+        
+        if (measures_to_estimate(1) || measures_to_estimate(2)) && measures_to_estimate(3) % compute naive MI even when not used for identifying significantly tuned cells
+            MI_naive=compute_MI(spike_train(:,sufficiently_active_cells_indexes),stimulus_trace);
+            MI_naive_significantly_tuned_cells=MI_naive(tuning_significance_active_cells<tuning_significance_threshold);
+            average_MI_naive_significantly_tuned_cells=mean(MI_naive_significantly_tuned_cells,'omitnan');
+        end
+    else
+        disp(['Found ' num2str(length(sufficiently_active_cells_indexes)) '/' num2str(length(active_bins)) ' sufficiently active cells'])
+        disp('No significantly tuned cells were found')
     end
-    display_progress_bar(' done',false)
-    display_progress_bar('',true)
-    
-    % Finding significant cells:
-    information_significance_active_cells=1-sum(repmat(MI_naive,1,num_shuffles)>MI_shuffle,2)/num_shuffles;
-    p_value_significant_active_cells=information_significance_active_cells(information_significance_active_cells<significance_threshold)';
-    MI_naive_significant_cells=MI_naive(information_significance_active_cells<significance_threshold);
-    average_MI_naive_significant_cells=mean(MI_naive_significant_cells,'omitnan');
-    significant_active_cells_indexes=sufficiently_active_cells_indexes(information_significance_active_cells<significance_threshold);
-end
-
-% Focusing only on significant cells:
-average_rates_significant_cells=average_firing_rates(significant_active_cells_indexes);
-active_bins_significant_cells=active_bins(significant_active_cells_indexes);
-fraction_significant_and_active_cells=length(significant_active_cells_indexes)/length(active_bins);
-fraction_of_significant_from_active_cells=length(significant_active_cells_indexes)/length(sufficiently_active_cells_indexes);
-disp(['Found ' num2str(length(sufficiently_active_cells_indexes)) '/' num2str(length(active_bins)) ' sufficiently active cells, out of which ' num2str(length(significant_active_cells_indexes)) ' cells (' num2str(round(100*length(significant_active_cells_indexes)/length(sufficiently_active_cells_indexes))) '%) are significantly modulated by the encoded variable.'])
-spike_train_significant_cells=spike_train(:,significant_active_cells_indexes);
-
-if (measures_to_estimate(1) || measures_to_estimate(2)) && measures_to_estimate(3) % compute naive MI even when not used for identifying significant cells
-    MI_naive=compute_MI(spike_train(:,sufficiently_active_cells_indexes),stimulus_trace);
-    MI_naive_significant_cells=MI_naive(information_significance_active_cells<significance_threshold);
-    average_MI_naive_significant_cells=mean(MI_naive_significant_cells,'omitnan');
+else
+    disp('No sufficiently active cells were found')
 end
 
 %% Step 3: Calculating the naive and shuffle information as a function of sample size:
 
-subsampling_repetitions=100; % number of repetitions in the subsampling of the data
+subsampling_repetitions=500; % number of repetitions in the subsampling of the data
 T=size(spike_train,1); % total number of samples
 subsample_size=(0.05:0.05:1)*T; % subsamples with size of different fractions of the data
 
 disp('Computing information as a function of subsample size:')
-if measures_to_estimate(1) || measures_to_estimate(2) 
+if measures_to_estimate(1) || measures_to_estimate(2)
     if measures_to_estimate(3) % Compute SI and MI versus sample size
         [SI_naive_bit_spike_versus_sample_size,SI_shuffle_bit_spike_versus_sample_size,SI_naive_bit_sec_versus_sample_size,SI_shuffle_bit_sec_versus_sample_size,MI_naive_versus_sample_size,MI_shuffle_versus_sample_size]=...
-            compute_information_versus_sample_size(spike_train_significant_cells,stimulus_trace,subsample_size,dt,subsampling_repetitions,measures_to_estimate);  
-
+            compute_information_versus_sample_size(spike_train_significantly_tuned_cells,stimulus_trace,subsample_size,dt,subsampling_repetitions,measures_to_estimate);
+        
     else % Compute only SI versus sample size
         [SI_naive_bit_spike_versus_sample_size,SI_shuffle_bit_spike_versus_sample_size,SI_naive_bit_sec_versus_sample_size,SI_shuffle_bit_sec_versus_sample_size]=...
-            compute_information_versus_sample_size(spike_train_significant_cells,stimulus_trace,subsample_size,dt,subsampling_repetitions,measures_to_estimate);
+            compute_information_versus_sample_size(spike_train_significantly_tuned_cells,stimulus_trace,subsample_size,dt,subsampling_repetitions,measures_to_estimate);
     end
 elseif measures_to_estimate(3) % Compute only MI versus sample size
     [~,~,~,~,MI_naive_versus_sample_size,MI_shuffle_versus_sample_size]=...
-        compute_information_versus_sample_size(spike_train_significant_cells,stimulus_trace,subsample_size,dt,subsampling_repetitions,measures_to_estimate);
+        compute_information_versus_sample_size(spike_train_significantly_tuned_cells,stimulus_trace,subsample_size,dt,subsampling_repetitions,measures_to_estimate);
 end
 
 %% Step 4: Correcting the bias using the scaled shuffle reduction (SSR) and bounded asymptotic extrapolation (BAE) methods:
@@ -352,25 +367,25 @@ unbiased_information_estimation_results.settings.num_shuffles=num_shuffles;
 unbiased_information_estimation_results.settings.shuffle_type=shuffle_type;
 unbiased_information_estimation_results.settings.active_bins_threshold=active_bins_threshold;
 unbiased_information_estimation_results.settings.firing_rate_threshold=firing_rate_threshold;
-unbiased_information_estimation_results.settings.significance_threshold=significance_threshold;
+unbiased_information_estimation_results.settings.tuning_significance_threshold=tuning_significance_threshold;
 unbiased_information_estimation_results.settings.subsampling_repetitions=subsampling_repetitions;
 
 % Data statistics:
 unbiased_information_estimation_results.firing_statistics=struct;
 unbiased_information_estimation_results.firing_statistics.fraction_sufficiently_active_cells=fraction_sufficiently_active_cells;
-unbiased_information_estimation_results.firing_statistics.fraction_significant_and_active_cells=fraction_significant_and_active_cells;
-unbiased_information_estimation_results.firing_statistics.fraction_of_significant_from_active_cells=fraction_of_significant_from_active_cells;
-unbiased_information_estimation_results.firing_statistics.average_rates_significant_cells=average_rates_significant_cells;
-unbiased_information_estimation_results.firing_statistics.active_bins_significant_cells=active_bins_significant_cells;
-unbiased_information_estimation_results.firing_statistics.significant_active_cells_indexes=significant_active_cells_indexes;
+unbiased_information_estimation_results.firing_statistics.fraction_significantly_tuned_and_active_cells=fraction_significantly_tuned_and_active_cells;
+unbiased_information_estimation_results.firing_statistics.fraction_of_significantly_tuned_from_active_cells=fraction_of_significantly_tuned_from_active_cells;
+unbiased_information_estimation_results.firing_statistics.average_rates_significantly_tuned_cells=average_rates_significantly_tuned_cells;
+unbiased_information_estimation_results.firing_statistics.active_bins_significantly_tuned_cells=active_bins_significantly_tuned_cells;
+unbiased_information_estimation_results.firing_statistics.significantly_tuned_and_active_cells_indexes=significantly_tuned_and_active_cells_indexes;
 unbiased_information_estimation_results.firing_statistics.sufficiently_active_cells_indexes=sufficiently_active_cells_indexes;
-unbiased_information_estimation_results.firing_statistics.p_value_significant_active_cells=p_value_significant_active_cells;
+unbiased_information_estimation_results.firing_statistics.p_value_significantly_tuned_and_active_cells=p_value_significantly_tuned_and_active_cells;
 
 % Estimated information:
 unbiased_information_estimation_results.information=struct;
 if measures_to_estimate(1) % SI in bit/spike
     % For individual cells:
-    unbiased_information_estimation_results.information.SI_naive_bit_spike=SI_naive_bit_spike_significant_cells;
+    unbiased_information_estimation_results.information.SI_naive_bit_spike=SI_naive_bit_spike_significantly_tuned_cells;
     unbiased_information_estimation_results.information.SI_SSR_bit_spike=SI_SSR_bit_spike;
     unbiased_information_estimation_results.information.SI_BAE_bit_spike=SI_BAE_bit_spike;
     unbiased_information_estimation_results.information.SI_disagreement_bit_spike=SI_disagreement_bit_spike;
@@ -378,7 +393,7 @@ if measures_to_estimate(1) % SI in bit/spike
     unbiased_information_estimation_results.information.SI_BAE_fit_R_2_bit_spike=SI_BAE_fit_R_2_bit_spike;
     
     % Average across the population:
-    unbiased_information_estimation_results.information.average_SI_naive_bit_spike=average_SI_naive_bit_spike_significant_cells;
+    unbiased_information_estimation_results.information.average_SI_naive_bit_spike=average_SI_naive_bit_spike_significantly_tuned_cells;
     unbiased_information_estimation_results.information.average_SI_SSR_bit_spike=average_SI_SSR_bit_spike;
     unbiased_information_estimation_results.information.average_SI_BAE_bit_spike=average_SI_BAE_bit_spike;
     unbiased_information_estimation_results.information.average_SI_disagreement_bit_spike=average_SI_disagreement_bit_spike;
@@ -386,15 +401,15 @@ if measures_to_estimate(1) % SI in bit/spike
     unbiased_information_estimation_results.information.average_SI_BAE_fit_R_2_bit_spike=average_SI_BAE_fit_R_2_bit_spike;
     
     % Average across spikes (weighted by the cells firing rates):
-    unbiased_information_estimation_results.information.weighted_average_SI_naive_bit_spike=sum(SI_naive_bit_spike_significant_cells.*average_rates_significant_cells')/sum(average_rates_significant_cells);
-    unbiased_information_estimation_results.information.weighted_average_SI_SSR_bit_spike=sum(SI_SSR_bit_spike.*average_rates_significant_cells')/sum(average_rates_significant_cells);
-    unbiased_information_estimation_results.information.weighted_average_SI_BAE_bit_spike=sum(SI_BAE_bit_spike.*average_rates_significant_cells')/sum(average_rates_significant_cells);
-    unbiased_information_estimation_results.information.weighted_average_SI_disagreement_bit_spike=sum(SI_disagreement_bit_spike.*average_rates_significant_cells')/sum(average_rates_significant_cells);
+    unbiased_information_estimation_results.information.weighted_average_SI_naive_bit_spike=sum(SI_naive_bit_spike_significantly_tuned_cells.*average_rates_significantly_tuned_cells')/sum(average_rates_significantly_tuned_cells);
+    unbiased_information_estimation_results.information.weighted_average_SI_SSR_bit_spike=sum(SI_SSR_bit_spike.*average_rates_significantly_tuned_cells')/sum(average_rates_significantly_tuned_cells);
+    unbiased_information_estimation_results.information.weighted_average_SI_BAE_bit_spike=sum(SI_BAE_bit_spike.*average_rates_significantly_tuned_cells')/sum(average_rates_significantly_tuned_cells);
+    unbiased_information_estimation_results.information.weighted_average_SI_disagreement_bit_spike=sum(SI_disagreement_bit_spike.*average_rates_significantly_tuned_cells')/sum(average_rates_significantly_tuned_cells);
 end
 
 if measures_to_estimate(2) % SI in bit/sec
     % For individual cells:
-    unbiased_information_estimation_results.information.SI_naive_bit_sec=SI_naive_bit_sec_significant_cells;
+    unbiased_information_estimation_results.information.SI_naive_bit_sec=SI_naive_bit_sec_significantly_tuned_cells;
     unbiased_information_estimation_results.information.SI_SSR_bit_sec=SI_SSR_bit_sec;
     unbiased_information_estimation_results.information.SI_BAE_bit_sec=SI_BAE_bit_sec;
     unbiased_information_estimation_results.information.SI_disagreement_bit_sec=SI_disagreement_bit_sec;
@@ -402,7 +417,7 @@ if measures_to_estimate(2) % SI in bit/sec
     unbiased_information_estimation_results.information.SI_BAE_fit_R_2_bit_sec=SI_BAE_fit_R_2_bit_sec;
     
     % Average across the population:
-    unbiased_information_estimation_results.information.average_SI_naive_bit_sec=average_SI_naive_bit_sec_significant_cells;
+    unbiased_information_estimation_results.information.average_SI_naive_bit_sec=average_SI_naive_bit_sec_significantly_tuned_cells;
     unbiased_information_estimation_results.information.average_SI_SSR_bit_sec=average_SI_SSR_bit_sec;
     unbiased_information_estimation_results.information.average_SI_BAE_bit_sec=average_SI_BAE_bit_sec;
     unbiased_information_estimation_results.information.average_SI_disagreement_bit_sec=average_SI_disagreement_bit_sec;
@@ -412,7 +427,7 @@ end
 
 if measures_to_estimate(3) % MI
     % For individual cells:
-    unbiased_information_estimation_results.information.MI_naive=MI_naive_significant_cells;
+    unbiased_information_estimation_results.information.MI_naive=MI_naive_significantly_tuned_cells;
     unbiased_information_estimation_results.information.MI_SSR=MI_SSR;
     unbiased_information_estimation_results.information.MI_BAE=MI_BAE;
     unbiased_information_estimation_results.information.MI_disagreement=MI_disagreement;
@@ -420,7 +435,7 @@ if measures_to_estimate(3) % MI
     unbiased_information_estimation_results.information.MI_BAE_fit_R_2=MI_BAE_fit_R_2;
     
     % Average across the population:
-    unbiased_information_estimation_results.information.average_MI_naive=average_MI_naive_significant_cells;
+    unbiased_information_estimation_results.information.average_MI_naive=average_MI_naive_significantly_tuned_cells;
     unbiased_information_estimation_results.information.average_MI_SSR=average_MI_SSR;
     unbiased_information_estimation_results.information.average_MI_BAE=average_MI_BAE;
     unbiased_information_estimation_results.information.average_MI_disagreement=average_MI_disagreement;
