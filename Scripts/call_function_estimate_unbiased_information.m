@@ -47,7 +47,7 @@ measures_to_estimate=[estimate_SI_bit_spike,estimate_SI_bit_sec,estimate_MI];
 settings.measures_to_estimate=measures_to_estimate; 
 
 % General parameters:
-settings.dt=1/20; % time bin in units of seconds
+settings.dt=0.05; % time bin in units of seconds
 
 % Focusing only on sufficiently active cells:
 settings.active_bins_threshold=10; % minimal number of time bins in which the cell is defined active - less than 10 active time bins leads to an inaccurate estimation
@@ -63,7 +63,7 @@ settings.tuning_significance_threshold=0.05;
 settings.subsampling_repetitions=500; % number of repetitions in the subsampling of the data
 settings.subsample_fraction=(0.1:0.1:1); % subsamples with size of different fractions of the data
 
-settings.plot_results=1; % 1 for plotting the results (0 otherwise)
+settings.plot_results=0; % 1 for plotting the results (0 otherwise)
 settings.save_figures=0; % 1 for saving the figures (0 otherwise)
 settings.figures_directory=[]; % if plotting results then set the path for saving the figures
 

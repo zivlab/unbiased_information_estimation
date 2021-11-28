@@ -53,13 +53,13 @@ stimulus_trace=temp_stimulus_trace.stimulus_trace;
 mkdir(data_path,'Sample data - results')
 mkdir(fullfile(data_path,'Sample data - results'),'Figures')
 plot_results=1; % 1 for plotting the results (0 otherwise)
-save_figures=1; % 1 for saving the figures (0 otherwise)
+save_figures=0; % 1 for saving the figures (0 otherwise)
 figures_directory='D:\dev\Bias correction\sample data results';
 
 %% Step 2: Identifying significantly modulated cells by comparing the naive information with shuffles:
 
 % Setting the parameters and which cells to analyze:
-dt=1/20; % time bin in units of seconds
+dt=0.05; % time bin in units of seconds
 shuffle_type='cyclic'; % permutations used for the tuning significance test can be either 'cyclic' or 'random'
 active_bins_threshold=10; % minimal number of time bins in which the cell is defined active - less than 10 active time bins leads to an inaccurate estimation
 firing_rate_threshold=0; % in spike/sec.  Default value is 0, but you can choose to add an average firing rate threshold

@@ -41,3 +41,5 @@ The bias correction methods can be modified to accomodate additional information
 
 The obtained results of the SSR and BAE methods are compared against shuffle reduction (SR) and asymptotic extrapolation (AE). 
 
+When applied to quantify the spatial tuning of place cells, the common practice is to first filter out 
+time bins durning which the animal is not running (i.e., analyze only time bins with speed > threshold) 
