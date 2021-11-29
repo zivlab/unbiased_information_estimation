@@ -10,7 +10,11 @@ function [MI]=compute_MI(spike_train,stimulus_trace)
 % Outputs:
 % 1. MI - Vector of size N with the naive information of each cell
 
-epsilon=realmin;
+if isa(spike_train,'single') || isa(stimulus_trace,'single')
+    epsilon=10^-30;
+else
+    epsilon=realmin;
+end
 states=unique(stimulus_trace);
 num_states=length(states);
 num_cells=size(spike_train,2);
