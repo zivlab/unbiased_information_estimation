@@ -12,7 +12,7 @@ function unbiased_information_estimation_results=estimate_unbiased_information(s
 % Outputs:
 % 1. unbiased_information_estimation_results - all the results in a single data structure
 
-unbiased_information_estimation_results.information=struct;
+unbiased_information_estimation_results=struct;
 
 measures_to_estimate=settings.measures_to_estimate;
 dt=settings.dt;
@@ -347,7 +347,6 @@ if ~isempty(sufficiently_active_cells_indexes)
         
         % Saving the final results in a single data structure:
         % General parameters:
-        unbiased_information_estimation_results=struct;
         unbiased_information_estimation_results.settings=struct;
         unbiased_information_estimation_results.settings.dt=dt;
         unbiased_information_estimation_results.settings.num_shuffles=num_shuffles;
