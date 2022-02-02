@@ -349,11 +349,14 @@ if ~isempty(sufficiently_active_cells_indexes)
         % General parameters:
         unbiased_information_estimation_results.settings=struct;
         unbiased_information_estimation_results.settings.dt=dt;
-        unbiased_information_estimation_results.settings.num_shuffles=num_shuffles;
-        unbiased_information_estimation_results.settings.shuffle_type=shuffle_type;
+        if estimate_only_significantly_tuned_cells
+            unbiased_information_estimation_results.settings.num_shuffles=num_shuffles;
+            unbiased_information_estimation_results.settings.shuffle_type=shuffle_type;
+            unbiased_information_estimation_results.settings.tuning_significance_threshold=tuning_significance_threshold;
+            unbiased_information_estimation_results.firing_statistics.p_value_significantly_tuned_and_active_cells=p_value_significantly_tuned_and_active_cells;
+        end
         unbiased_information_estimation_results.settings.active_bins_threshold=active_bins_threshold;
         unbiased_information_estimation_results.settings.firing_rate_threshold=firing_rate_threshold;
-        unbiased_information_estimation_results.settings.tuning_significance_threshold=tuning_significance_threshold;
         unbiased_information_estimation_results.settings.subsampling_repetitions=subsampling_repetitions;
         
         % Data statistics:
@@ -365,7 +368,6 @@ if ~isempty(sufficiently_active_cells_indexes)
         unbiased_information_estimation_results.firing_statistics.active_bins_significantly_tuned_cells=active_bins_significantly_tuned_cells;
         unbiased_information_estimation_results.firing_statistics.sufficiently_active_cells_indexes=sufficiently_active_cells_indexes;
         unbiased_information_estimation_results.firing_statistics.significantly_tuned_and_active_cells_indexes=significantly_tuned_and_active_cells_indexes;
-        unbiased_information_estimation_results.firing_statistics.p_value_significantly_tuned_and_active_cells=p_value_significantly_tuned_and_active_cells;
         
         % Estimated information:
         if measures_to_estimate(1) % SI in bit/spike
