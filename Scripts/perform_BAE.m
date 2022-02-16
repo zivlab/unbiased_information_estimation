@@ -79,6 +79,7 @@ if size(information_versus_sample_size,1)>1
     BAE_fit_R_2=nan(N,1);
     for n=1:N
         this_information_versus_sample_size=information_versus_sample_size(n,:);
+        if max(this_information_versus_sample_size)>0
         a_0=this_information_versus_sample_size(end);
         b_0=this_information_versus_sample_size(1)-this_information_versus_sample_size(end);
         c_0=1./middle_sample_size*(this_information_versus_sample_size(1)-this_information_versus_sample_size(middle_index))/(this_information_versus_sample_size(middle_index)-this_information_versus_sample_size(end));
@@ -93,7 +94,8 @@ if size(information_versus_sample_size,1)>1
         this_BAE_fit_params=lsqcurvefit(F_model,initial_parameters,subsample_size,this_information_versus_sample_size,lb,ub,options);
         BAE_information(n)=this_BAE_fit_params(1);
         this_BAE_fitted_model=this_BAE_fit_params(1)+(this_BAE_fit_params(2))./(1+this_BAE_fit_params(3).*subsample_size);
-        BAE_fit_R_2(n)=1-mean((this_BAE_fitted_model-this_information_versus_sample_size).^2)./var(this_information_versus_sample_size);
+        BAE_fit_R_2(n)=1-mean((this_BAE_fitted_model-this_information_versus_sample_size).^2)./var(this_information_versus_sample_size);      
+        end
     end
 else
     BAE_information=average_BAE_information;

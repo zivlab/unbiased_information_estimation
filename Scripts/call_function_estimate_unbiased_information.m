@@ -29,7 +29,7 @@
 
 % Outputs:
 %----------
-% General settings (dt, number of shuffles, subsampling repetitions, etc.) and
+% General settings (dt, number of shuffles, subsampling repetitions, etc.) 
 % Firing statistics (average rates, average active time bins, fraction of significantly tuned cells, etc.)
 % Estimated information (SI and MI based on the SSR and BAE methods)
 
