@@ -151,7 +151,7 @@ end
 
 subsampling_repetitions=500; % number of repetitions in the subsampling of the data
 T=size(spike_train,1); % total number of samples
-subsample_size=(0.05:0.05:1)*T; % subsamples with size of different fractions of the data
+subsample_size=(0.1:0.1:1)*T; % subsamples with size of different fractions of the data
 
 disp('Computing information as a function of subsample size:')
 if measures_to_estimate(1) || measures_to_estimate(2)

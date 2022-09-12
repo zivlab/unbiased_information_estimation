@@ -345,16 +345,60 @@ if ~isempty(sufficiently_active_cells_indexes)
             end
         end
         
+        if ~estimate_only_significantly_tuned_cells
+            shuffle_type=settings.shuffle_type;
+            num_shuffles=settings.num_shuffles;
+            tuning_significance_threshold=settings.tuning_significance_threshold;
+            
+            % obtaining shuffled spike trains:
+            shuffled_spike_trains=shuffle_spike_trains(spike_train(:,sufficiently_active_cells_indexes),num_shuffles,shuffle_type);
+            
+            % Indetifying significantly modulated cells:
+            if measures_to_estimate(1) || measures_to_estimate(2) % based on the SI in active cells for naive versus shuffle
+                
+                % shuffle SI:
+                SI_shuffle_bit_spike=nan(length(sufficiently_active_cells_indexes),num_shuffles);
+                display_progress_bar('Computing shuffle information for the tuning significance test: ',false)
+                for n=1:num_shuffles
+                    display_progress_bar(100*(n/num_shuffles),false)
+                    [temp_shuffled_tuning_curves,~]=compute_tuning_curves(shuffled_spike_trains(:,:,n),stimulus_trace,dt);
+                    [SI_shuffle_bit_spike(:,n),~]=compute_SI(average_firing_rates(sufficiently_active_cells_indexes),temp_shuffled_tuning_curves,normalized_states_distribution);
+                end
+                display_progress_bar(' done',false)
+                display_progress_bar('',true)
+                
+                % Finding significantly tuned cells:
+                tuning_significance_active_cells=1-sum(repmat(SI_naive_bit_spike,1,num_shuffles)>SI_shuffle_bit_spike,2)/num_shuffles;
+                p_value_significantly_tuned_and_active_cells=tuning_significance_active_cells(tuning_significance_active_cells<tuning_significance_threshold)';
+                significantly_tuned_and_active_cells_indexes=sufficiently_active_cells_indexes(tuning_significance_active_cells<tuning_significance_threshold);                
+            elseif measures_to_estimate(3) % based on the MI in active cells for naive versus shuffle
+                
+                % shuffle MI:
+                MI_shuffle=nan(length(sufficiently_active_cells_indexes),num_shuffles);
+                display_progress_bar('Computing shuffle information: ',false)
+                for n=1:num_shuffles
+                    display_progress_bar(100*(n/num_shuffles),false)
+                    MI_shuffle(:,n)=compute_MI(squeeze(shuffled_spike_trains(:,:,n)),stimulus_trace);
+                end
+                display_progress_bar(' done',false)
+                display_progress_bar('',true)
+                
+                % Finding significantly tuned cells:
+                tuning_significance_active_cells=1-sum(repmat(MI_naive,1,num_shuffles)>MI_shuffle,2)/num_shuffles;
+                p_value_significantly_tuned_and_active_cells=tuning_significance_active_cells(tuning_significance_active_cells<tuning_significance_threshold)';
+                if ~isempty(MI_naive_significantly_tuned_cells)
+                    significantly_tuned_and_active_cells_indexes=sufficiently_active_cells_indexes(tuning_significance_active_cells<tuning_significance_threshold);
+                end
+            end                        
+        end    
+        
         % Saving the final results in a single data structure:
         % General parameters:
         unbiased_information_estimation_results.settings=struct;
         unbiased_information_estimation_results.settings.dt=dt;
-        if estimate_only_significantly_tuned_cells
-            unbiased_information_estimation_results.settings.num_shuffles=num_shuffles;
-            unbiased_information_estimation_results.settings.shuffle_type=shuffle_type;
-            unbiased_information_estimation_results.settings.tuning_significance_threshold=tuning_significance_threshold;
-            unbiased_information_estimation_results.firing_statistics.p_value_significantly_tuned_and_active_cells=p_value_significantly_tuned_and_active_cells;
-        end
+        unbiased_information_estimation_results.settings.num_shuffles=num_shuffles;
+        unbiased_information_estimation_results.settings.shuffle_type=shuffle_type;
+        unbiased_information_estimation_results.settings.tuning_significance_threshold=tuning_significance_threshold;        
         unbiased_information_estimation_results.settings.active_bins_threshold=active_bins_threshold;
         unbiased_information_estimation_results.settings.firing_rate_threshold=firing_rate_threshold;
         unbiased_information_estimation_results.settings.subsampling_repetitions=subsampling_repetitions;
@@ -363,11 +407,12 @@ if ~isempty(sufficiently_active_cells_indexes)
         unbiased_information_estimation_results.firing_statistics=struct;
         unbiased_information_estimation_results.firing_statistics.fraction_sufficiently_active_cells=fraction_sufficiently_active_cells;
         unbiased_information_estimation_results.firing_statistics.fraction_significantly_tuned_and_active_cells=fraction_significantly_tuned_and_active_cells;
-        unbiased_information_estimation_results.firing_statistics.fraction_of_significantly_tuned_from_active_cells=fraction_of_significantly_tuned_from_active_cells;
-        unbiased_information_estimation_results.firing_statistics.average_rates_significantly_tuned_cells=average_rates_significantly_tuned_cells;
-        unbiased_information_estimation_results.firing_statistics.active_bins_significantly_tuned_cells=active_bins_significantly_tuned_cells;
+        unbiased_information_estimation_results.firing_statistics.fraction_of_significantly_tuned_from_active_cells=fraction_of_significantly_tuned_from_active_cells;        
+        unbiased_information_estimation_results.firing_statistics.average_rates=average_rates_significantly_tuned_cells;
+        unbiased_information_estimation_results.firing_statistics.active_bins=active_bins_significantly_tuned_cells;
         unbiased_information_estimation_results.firing_statistics.sufficiently_active_cells_indexes=sufficiently_active_cells_indexes;
         unbiased_information_estimation_results.firing_statistics.significantly_tuned_and_active_cells_indexes=significantly_tuned_and_active_cells_indexes;
+        unbiased_information_estimation_results.firing_statistics.p_value_significantly_tuned_and_active_cells=p_value_significantly_tuned_and_active_cells;
         
         % Estimated information:
         if measures_to_estimate(1) % SI in bit/spike

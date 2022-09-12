@@ -54,7 +54,7 @@ settings.active_bins_threshold=10; % minimal number of time bins in which the ce
 settings.firing_rate_threshold=0; % in spike/sec.  Default value is 0, but you can choose to add an average firing rate threshold
 
 % Settings for the tuning signficance test:
-settings.estimate_only_significantly_tuned_cells=1; % 1 if estimation is performed only for significanty tuned cells (0 otherwise)
+settings.estimate_only_significantly_tuned_cells=0; % 1 if estimation is performed only for significanty tuned cells (0 otherwise)
 settings.shuffle_type='cyclic'; % permutations used for the significance test can be either 'cyclic' or 'random'
 settings.num_shuffles=1000;
 settings.tuning_significance_threshold=0.05;
