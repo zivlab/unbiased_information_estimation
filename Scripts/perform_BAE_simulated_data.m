@@ -38,7 +38,9 @@ else
     b_0=information_versus_sample_size(1,1)-information_versus_sample_size(1,end);
     c_0=1./middle_sample_size*(information_versus_sample_size(1,1)-information_versus_sample_size(1,middle_index))/(information_versus_sample_size(1,middle_index)-information_versus_sample_size(1,end));
 end
+epsilon_value=10^-10;
 initial_parameters=[a_0 b_0 c_0];
+initial_parameters(initial_parameters<=0)=epsilon_value;
 F_model = @(x,xdata)...
     x(1)+(x(2))./(1+x(3).*xdata);
 lb = [0 0 0];
@@ -62,6 +64,7 @@ else
     c_0=information_versus_sample_size(1,1)-information_versus_sample_size(1,end);
 end
 initial_parameters=[a_0 b_0 c_0];
+initial_parameters(initial_parameters<=0)=epsilon_value;
 F_model = @(x,xdata)...
     x(1)+x(2)./xdata+x(3)./xdata.^2;
 lb = [0 0 0];
@@ -84,6 +87,7 @@ if size(information_versus_sample_size,1)>1
         c_0=1./middle_sample_size*(this_information_versus_sample_size(1)-this_information_versus_sample_size(middle_index))/(this_information_versus_sample_size(middle_index)-this_information_versus_sample_size(end));
         
         initial_parameters=[a_0 b_0 c_0];
+        initial_parameters(initial_parameters<=0)=epsilon_value;
         F_model = @(x,xdata)...
             x(1)+x(2)./(1+x(3).*xdata);
         lb = [0 0 0];

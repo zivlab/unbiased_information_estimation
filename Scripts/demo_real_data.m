@@ -40,12 +40,12 @@ close all
 
 estimate_SI_bit_spike=1; % Choose to estimate SI (bit/spike) by setting the value to 1 (0 otherwise)
 estimate_SI_bit_sec=1; % Choose to estimate SI (bit/sec) by setting the value to 1 (0 otherwise)
-estimate_MI=1; % Choose to estimate MI by setting the value to 1 (0 otherwise)
+estimate_MI=0; % Choose to estimate MI by setting the value to 1 (0 otherwise)
 measures_to_estimate=[estimate_SI_bit_spike,estimate_SI_bit_sec,estimate_MI];
 
 %% Step 1 - load the spike train and stimulus trace:
 
-data_path='D:\dev\Bias correction\unbiased_information_estimation\Real data\Sample data\';
+data_path='D:\Liron\PhD - Ziv lab\CellReg\Slack questions\Ofri\';
 temp_spike_train=load(fullfile(data_path,'spike_train.mat'));
 spike_train=temp_spike_train.spike_train;
 temp_stimulus_trace=load(fullfile(data_path,'stimulus_trace.mat'));

@@ -69,11 +69,26 @@ settings.figures_directory=[]; % if plotting results then set the path for savin
 
 %% loading the data and calling the unbiased_information_estimation function: 
 
-data_path='D:\dev\Bias correction\unbiased_information_estimation\Real data\Sample data\';
-temp_spike_train=load(fullfile(data_path,'spike_train.mat'));
-spike_train=temp_spike_train.spike_train;
-temp_stimulus_trace=load(fullfile(data_path,'stimulus_trace.mat'));
-stimulus_trace=temp_stimulus_trace.stimulus_trace;
+% data_path='D:\dev\Bias correction\unbiased_information_estimation\Real data\Sample data\';
+% temp_spike_train=load(fullfile(data_path,'spike_train.mat'));
+% spike_train=temp_spike_train.spike_train;
+% temp_stimulus_trace=load(fullfile(data_path,'stimulus_trace.mat'));
+% stimulus_trace=temp_stimulus_trace.stimulus_trace;
+% 
+% % performing the estimation of information content:
+% unbiased_information_estimation_results=estimate_unbiased_information(spike_train,stimulus_trace,settings);
 
-% performing the estimation of information content:
-unbiased_information_estimation_results=estimate_unbiased_information(spike_train,stimulus_trace,settings);
+
+temp_spike_train=Data;
+temp_stimulus_trace=Location;
+for n=1:size(Data,2)
+    disp(['Calculating information for session # ' num2str(n) ' - right'])
+    spike_train=temp_spike_train(n).right;    
+    stimulus_trace=temp_stimulus_trace(n).right;
+    unbiased_information_estimation_results=estimate_unbiased_information(spike_train,stimulus_trace,settings);
+    
+    disp(['Calculating information for session # ' num2str(n) ' - left'])
+    spike_train=temp_spike_train(n).left;
+    stimulus_trace=temp_stimulus_trace(n).left;
+    unbiased_information_estimation_results=estimate_unbiased_information(spike_train,stimulus_trace,settings);
+end
